@@ -2,14 +2,20 @@ import {
 	DescribeDBEngineVersionsCommand,
 	RDSClient,
 } from "@aws-sdk/client-rds";
-import { MysqlEngineVersion, PostgresEngineVersion } from "aws-cdk-lib/aws-rds";
+import {
+	AuroraMysqlEngineVersion,
+	MysqlEngineVersion,
+	PostgresEngineVersion,
+} from "aws-cdk-lib/aws-rds";
 import { mockClient } from "aws-sdk-client-mock";
 import "aws-sdk-client-mock-jest";
 import { join } from "path";
 import { getSdkMysqlEngineVersions } from "../../src/provider/rds";
 import {
+	CDK_LIB_CLUSTER_ENGINE_PATH,
 	CDK_LIB_INSTANCE_ENGINE_PATH,
-	getCDKEngineVersions,
+	getCDKClusterEngineVersions,
+	getCDKInstanceEngineVersions,
 } from "../../src/util/provider/rds";
 
 const rdsMock = mockClient(RDSClient);
@@ -58,13 +64,13 @@ describe("SDK", () => {
 	});
 });
 
-describe("CDK", () => {
-	const spy = jest
-		.spyOn(CDK_LIB_INSTANCE_ENGINE_PATH, "auto", "get")
-		.mockReturnValue(join(__dirname, "./mocked-instance-engine.d.ts"));
+describe("getCDKInstanceEngineVersions", () => {
+	it("should extract getCDKInstanceEngineVersions from .ts", () => {
+		const spy = jest
+			.spyOn(CDK_LIB_INSTANCE_ENGINE_PATH, "auto", "get")
+			.mockReturnValue(join(__dirname, "./mocked-instance-engine.ts"));
 
-	it("getCDKEngineVersions", () => {
-		const cdkEngineVersions = getCDKEngineVersions();
+		const cdkEngineVersions = getCDKInstanceEngineVersions();
 		expect(spy).toHaveBeenCalled();
 
 		expect(cdkEngineVersions).toHaveLength(2);
@@ -74,6 +80,62 @@ describe("CDK", () => {
 		expect(first.isDeprecated).toBe(true);
 
 		expect(second.engineVersion).toEqual(PostgresEngineVersion.VER_12_11);
+		expect(second.isDeprecated).toBe(false);
+	});
+
+	it("should extract getCDKInstanceEngineVersions from .d.ts", () => {
+		const spy = jest
+			.spyOn(CDK_LIB_INSTANCE_ENGINE_PATH, "auto", "get")
+			.mockReturnValue(join(__dirname, "./mocked-instance-engine.d.ts"));
+
+		const cdkEngineVersions = getCDKInstanceEngineVersions();
+		expect(spy).toHaveBeenCalled();
+
+		expect(cdkEngineVersions).toHaveLength(2);
+
+		const [first, second] = cdkEngineVersions;
+		expect(first.engineVersion).toEqual(PostgresEngineVersion.VER_9_6_24);
+		expect(first.isDeprecated).toBe(true);
+
+		expect(second.engineVersion).toEqual(PostgresEngineVersion.VER_12_11);
+		expect(second.isDeprecated).toBe(false);
+	});
+});
+
+describe("getCDKClusterEngineVersions", () => {
+	it("should extract getCDKClusterEngineVersions from .ts", () => {
+		const spy = jest
+			.spyOn(CDK_LIB_CLUSTER_ENGINE_PATH, "auto", "get")
+			.mockReturnValue(join(__dirname, "./mocked-cluster-engine.ts"));
+
+		const cdkEngineVersions = getCDKClusterEngineVersions();
+		expect(spy).toHaveBeenCalled();
+
+		expect(cdkEngineVersions).toHaveLength(2);
+
+		const [first, second] = cdkEngineVersions;
+		expect(first.engineVersion).toEqual(AuroraMysqlEngineVersion.VER_2_10_3);
+		expect(first.isDeprecated).toBe(true);
+
+		expect(second.engineVersion).toEqual(AuroraMysqlEngineVersion.VER_2_11_1);
+		expect(second.isDeprecated).toBe(false);
+	});
+
+	it("should extract getCDKClusterEngineVersions from .d.ts", () => {
+		const spy = jest
+			.spyOn(CDK_LIB_CLUSTER_ENGINE_PATH, "auto", "get")
+			.mockReturnValue(join(__dirname, "./mocked-cluster-engine.d.ts"));
+
+		const cdkEngineVersions = getCDKClusterEngineVersions();
+		expect(spy).toHaveBeenCalled();
+
+		expect(cdkEngineVersions).toHaveLength(2);
+
+		const [first, second] = cdkEngineVersions;
+		expect(first.engineVersion).toEqual(AuroraMysqlEngineVersion.VER_2_10_3);
+		expect(first.isDeprecated).toBe(true);
+
+		expect(second.engineVersion).toEqual(AuroraMysqlEngineVersion.VER_2_11_1);
 		expect(second.isDeprecated).toBe(false);
 	});
 });

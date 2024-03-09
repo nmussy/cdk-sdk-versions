@@ -228,8 +228,9 @@ export function parseSourceFile(
 	return sourceFile;
 }
 
-const CLASS_DECLARATION_REGEX = /^export declare class (?<className>\w+)/;
-const STATIC_READONLY_PROPERTY_REGEX = /^static readonly (?<fieldName>\w+):/;
+const CLASS_EXPRESSION_REGEX = /^export( declare)? class (?<className>\w+)/;
+const PROPERTY_EXPRESSION_REGEX =
+	/^(public )?static readonly (?<fieldName>\w+)(:| =)/;
 
 export interface IStaticField {
 	className: string;
@@ -243,6 +244,7 @@ export function getStaticFieldComments(filename: string) {
 
 	walkCompilerAstAndFindComments(sourceFile, "", foundComments, [
 		ts.SyntaxKind.ClassDeclaration,
+		ts.SyntaxKind.ClassExpression,
 		ts.SyntaxKind.PropertyDeclaration,
 	]);
 
@@ -254,9 +256,7 @@ export function getStaticFieldComments(filename: string) {
 	for (const { compilerNode, textRange } of foundComments) {
 		if (compilerNode.kind !== ts.SyntaxKind.PropertyDeclaration) continue;
 
-		const fieldMatch = compilerNode
-			.getText()
-			.match(STATIC_READONLY_PROPERTY_REGEX);
+		const fieldMatch = compilerNode.getText().match(PROPERTY_EXPRESSION_REGEX);
 		if (!fieldMatch?.groups) continue;
 		const {
 			groups: { fieldName },
@@ -264,7 +264,7 @@ export function getStaticFieldComments(filename: string) {
 
 		const classMatch = compilerNode.parent
 			.getText()
-			.match(CLASS_DECLARATION_REGEX);
+			.match(CLASS_EXPRESSION_REGEX);
 		if (!classMatch?.groups) continue;
 		const {
 			groups: { className },

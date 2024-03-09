@@ -1,5 +1,6 @@
 module.exports = {
-  transform: {
-    "^.+\\.tsx?$": "esbuild-jest"
-  }
+	transform: {
+		"^.+\\.(tsx?|jsx?)$": "esbuild-jest",
+	},
+	transformIgnorePatterns: ["node_modules/(?!(chalk)/)"],
 };

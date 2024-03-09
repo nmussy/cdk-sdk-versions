@@ -1,7 +1,7 @@
 {
 	"npm.packageManager": "yarn",
 
-	"editor.formatOnSave": false,
+	"editor.formatOnSave": true,
 	"editor.codeActionsOnSave": {
 		"quickfix.biome": "explicit",
 		"source.organizeImports": "explicit",
