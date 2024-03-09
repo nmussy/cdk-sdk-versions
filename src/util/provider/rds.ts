@@ -5,6 +5,7 @@ import {
 	PostgresEngineVersion,
 	SqlServerEngineVersion,
 } from "aws-cdk-lib/aws-rds";
+import { isEqualWith } from "lodash";
 import { dirname, join } from "path";
 import { getStaticFieldComments } from "../tsdoc";
 
@@ -49,30 +50,75 @@ export type CdkEngineVersionType =
 export type CdkEngineVersion = InstanceType<// @ts-ignore
 CdkEngineVersionType>;
 
-export const isOracleEngineVersion = (
-	engineVersion: CdkEngineVersion,
-): engineVersion is OracleEngineVersion =>
-	engineVersion instanceof OracleEngineVersion;
+export const CdkEngineGuard = {
+	OracleEngineVersion: (
+		engineVersion: CdkEngineVersion,
+	): engineVersion is OracleEngineVersion =>
+		!!(engineVersion as OracleEngineVersion).oracleFullVersion,
+	MysqlEngineVersion: (
+		engineVersion: CdkEngineVersion,
+	): engineVersion is MysqlEngineVersion =>
+		!!(engineVersion as MysqlEngineVersion).mysqlFullVersion,
+	MariaDbEngineVersion: (
+		engineVersion: CdkEngineVersion,
+	): engineVersion is MariaDbEngineVersion =>
+		!!(engineVersion as MariaDbEngineVersion).mariaDbFullVersion,
+	PostgresEngineVersion: (
+		engineVersion: CdkEngineVersion,
+	): engineVersion is PostgresEngineVersion =>
+		!!(engineVersion as PostgresEngineVersion).postgresFullVersion,
+	SqlServerEngineVersion: (
+		engineVersion: CdkEngineVersion,
+	): engineVersion is SqlServerEngineVersion =>
+		!!(engineVersion as SqlServerEngineVersion).sqlServerFullVersion,
+};
 
-export const isMysqlEngineVersion = (
-	engineVersion: CdkEngineVersion,
-): engineVersion is MysqlEngineVersion =>
-	engineVersion instanceof MysqlEngineVersion;
+export type EngineKey = keyof typeof CdkEngineGuard;
 
-export const isMariaDbEngineVersion = (
+export const getVersionFromCdkEngineVersion = (
 	engineVersion: CdkEngineVersion,
-): engineVersion is MariaDbEngineVersion =>
-	engineVersion instanceof MariaDbEngineVersion;
+) => {
+	if (CdkEngineGuard.OracleEngineVersion(engineVersion)) {
+		return {
+			fullVersion: engineVersion.oracleFullVersion,
+			majorVersion: engineVersion.oracleMajorVersion,
+		};
+	}
+	if (CdkEngineGuard.MysqlEngineVersion(engineVersion)) {
+		return {
+			fullVersion: engineVersion.mysqlFullVersion,
+			majorVersion: engineVersion.mysqlMajorVersion,
+		};
+	}
+	if (CdkEngineGuard.MariaDbEngineVersion(engineVersion)) {
+		return {
+			fullVersion: engineVersion.mariaDbFullVersion,
+			majorVersion: engineVersion.mariaDbMajorVersion,
+		};
+	}
+	if (CdkEngineGuard.PostgresEngineVersion(engineVersion)) {
+		return {
+			fullVersion: engineVersion.postgresFullVersion,
+			majorVersion: engineVersion.postgresMajorVersion,
+		};
+	}
+	if (CdkEngineGuard.SqlServerEngineVersion(engineVersion)) {
+		return {
+			fullVersion: engineVersion.sqlServerFullVersion,
+			majorVersion: engineVersion.sqlServerMajorVersion,
+		};
+	}
+	throw new Error(`Unknown engine version: ${JSON.stringify(engineVersion)}`);
+};
 
-export const isPostgresEngineVersion = (
-	engineVersion: CdkEngineVersion,
-): engineVersion is PostgresEngineVersion =>
-	engineVersion instanceof PostgresEngineVersion;
+const compareEngineVersions = (a: CdkEngineVersion, b: CdkEngineVersion) =>
+	getVersionFromCdkEngineVersion(a).fullVersion ===
+	getVersionFromCdkEngineVersion(b).fullVersion;
 
-export const isSqlServerEngineVersion = (
-	engineVersion: CdkEngineVersion,
-): engineVersion is SqlServerEngineVersion =>
-	engineVersion instanceof SqlServerEngineVersion;
+export const isEngineVersionEqualWith = (
+	a: CdkEngineVersion,
+	b: CdkEngineVersion,
+) => isEqualWith(a, b, compareEngineVersions);
 
 export const CDK_LIB_INTERNALS_PATH = {
 	get rdsInstanceEngineDeclaration() {

@@ -10,15 +10,18 @@ import {
 	PostgresEngineVersion,
 	SqlServerEngineVersion,
 } from "aws-cdk-lib/aws-rds";
-import { isEqual } from "lodash";
+import chalk from "chalk";
 import {
+	CdkEngineGuard,
 	CdkEngineVersionType,
 	DeprecableEngineVersion,
+	EngineKey,
 	OracleEngine,
 	RdsEngine,
 	SqlServerEngine,
 	getCDKEngineVersions,
-	isMysqlEngineVersion,
+	getVersionFromCdkEngineVersion,
+	isEngineVersionEqualWith,
 } from "../util/provider/rds";
 
 const client = new RDSClient({});
@@ -72,32 +75,96 @@ export const getSdkPostgresEngineVersions = async () =>
 export const getSdkSqlServerEngineVersions = async (engine: SqlServerEngine) =>
 	_getSdkEngineVersions(engine, SqlServerEngineVersion);
 
-export const run = async () => {
-	const sdkEngines = await getSdkMysqlEngineVersions();
-	for (const cdkEngine of getCDKEngineVersions()) {
-		if (!isMysqlEngineVersion(cdkEngine.engineVersion)) continue;
+interface RunProps {
+	cdkEngines: DeprecableEngineVersion[];
+	sdkEngines: DeprecableEngineVersion[];
+	engineKey: EngineKey;
+}
+
+const stringifyEngineVersion = (
+	{ engineVersion }: DeprecableEngineVersion,
+	engineKey: EngineKey,
+) =>
+	`${engineKey}.${getVersionFromCdkEngineVersion(engineVersion).fullVersion}`;
+
+const CONSOLE_SYMBOLS = {
+	ADD: chalk.green("[+]"),
+	DELETE: chalk.red("[-]"),
+	UPDATE: chalk.yellow("[~]"),
+};
+
+const runSdk = async ({ sdkEngines, cdkEngines, engineKey }: RunProps) => {
+	const guard = CdkEngineGuard[engineKey];
+
+	for (const cdkEngine of cdkEngines) {
+		if (!guard(cdkEngine.engineVersion)) continue;
 
 		const sdkEngine = sdkEngines.find(
 			({ engineVersion }) =>
-				isMysqlEngineVersion(engineVersion) &&
-				isEqual(engineVersion, cdkEngine.engineVersion),
+				guard(engineVersion) &&
+				isEngineVersionEqualWith(engineVersion, cdkEngine.engineVersion),
 		);
 
 		if (!sdkEngine) {
-			console.log(`SDK engine not found for ${cdkEngine.engineVersion}`);
-			continue;
-		}
+			const version = getVersionFromCdkEngineVersion(cdkEngine.engineVersion);
+			if (version.fullVersion === version.majorVersion) continue;
 
-		if (!cdkEngine.isDeprecated && sdkEngine.isDeprecated) {
 			console.log(
-				`SDK engine ${sdkEngine.engineVersion} is deprecated, but not in the CDK`,
+				CONSOLE_SYMBOLS.DELETE,
+				stringifyEngineVersion(cdkEngine, engineKey),
+			);
+		} else if (!cdkEngine.isDeprecated && sdkEngine.isDeprecated) {
+			console.log(
+				CONSOLE_SYMBOLS.UPDATE,
+				stringifyEngineVersion(cdkEngine, engineKey),
+				"@deprecated",
+			);
+		} else if (cdkEngine.isDeprecated && !sdkEngine.isDeprecated) {
+			console.log(
+				CONSOLE_SYMBOLS.UPDATE,
+				stringifyEngineVersion(cdkEngine, engineKey),
+				"not @deprecated",
 			);
 		}
+	}
 
-		if (cdkEngine.isDeprecated && !sdkEngine.isDeprecated) {
+	for (const sdkEngine of sdkEngines) {
+		if (!guard(sdkEngine.engineVersion)) continue;
+
+		const cdkEngine = cdkEngines.find(
+			({ engineVersion }) =>
+				guard(engineVersion) &&
+				isEngineVersionEqualWith(engineVersion, sdkEngine.engineVersion),
+		);
+
+		if (!cdkEngine) {
 			console.log(
-				`CDK engine ${sdkEngine.engineVersion} should not have been marked as deprecated`,
+				CONSOLE_SYMBOLS.ADD,
+				stringifyEngineVersion(sdkEngine, engineKey),
+				sdkEngine.isDeprecated ? "@deprecated" : "",
 			);
 		}
 	}
 };
+
+export const run = async () => {
+	const cdkEngines = getCDKEngineVersions();
+
+	/* runSdk({
+		sdkEngines: await getSdkMysqlEngineVersions(),
+		cdkEngines,
+		engineKey: "MysqlEngineVersion",
+	});
+	runSdk({
+		sdkEngines: await getSdkMariaDbEngineVersions(),
+		cdkEngines,
+		engineKey: "MariaDbEngineVersion",
+	}); */
+	runSdk({
+		sdkEngines: await getSdkPostgresEngineVersions(),
+		cdkEngines,
+		engineKey: "PostgresEngineVersion",
+	});
+};
+
+void run();

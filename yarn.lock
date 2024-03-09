@@ -3404,6 +3404,7 @@ __metadata:
     aws-cdk-lib: "npm:^2.131.0"
     aws-sdk-client-mock: "npm:3.1.0-beta.1"
     aws-sdk-client-mock-jest: "npm:^3.0.1"
+    chalk: "npm:^5.3.0"
     constructs: "npm:^10.3.0"
     esbuild: "npm:^0.20.1"
     esbuild-jest: "npm:^0.5.0"
@@ -3432,6 +3433,13 @@ __metadata:
     ansi-styles: "npm:^4.1.0"
     supports-color: "npm:^7.1.0"
   checksum: 10c0/4a3fef5cc34975c898ffe77141450f679721df9dde00f6c304353fa9c8b571929123b26a0e4617bde5018977eb655b31970c297b91b63ee83bb82aeb04666880
+  languageName: node
+  linkType: hard
+
+"chalk@npm:^5.3.0":
+  version: 5.3.0
+  resolution: "chalk@npm:5.3.0"
+  checksum: 10c0/8297d436b2c0f95801103ff2ef67268d362021b8210daf8ddbe349695333eb3610a71122172ff3b0272f1ef2cf7cc2c41fdaa4715f52e49ffe04c56340feed09
   languageName: node
   linkType: hard
 
