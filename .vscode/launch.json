@@ -1,0 +1,33 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Launch via NPM",
+			"request": "launch",
+			"runtimeArgs": ["run-script", "debug"],
+			"runtimeExecutable": "npm",
+			"args": "test",
+			"skipFiles": ["<node_internals>/**"],
+			"type": "node"
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Launch Program",
+			"skipFiles": ["<node_internals>/**"],
+			"program": "${file}",
+			"preLaunchTask": "tsc: build - tsconfig.json",
+			"outFiles": ["${workspaceFolder}/dist/**/*.js"]
+		},
+		{
+			"type": "node",
+			"request": "launch",
+			"name": "Launch Jest",
+			"skipFiles": ["<node_internals>/**"],
+			"program": "${workspaceFolder}/node_modules/jest/bin/jest",
+			"args": ["test --runInBand"],
+			"console": "internalConsole",
+			"internalConsoleOptions": "neverOpen"
+		}
+	]
+}
