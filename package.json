@@ -1,6 +1,7 @@
 {
   "name": "cdk-sdk-versions",
   "packageManager": "yarn@4.1.1",
+  "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",

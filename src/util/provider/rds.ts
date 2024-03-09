@@ -6,7 +6,7 @@ import {
 	SqlServerEngineVersion,
 } from "aws-cdk-lib/aws-rds";
 import { isEqualWith } from "lodash";
-import { dirname, join } from "path";
+import { dirname, resolve } from "path";
 import { getStaticFieldComments } from "../tsdoc";
 
 export enum RdsEngine {
@@ -120,16 +120,29 @@ export const isEngineVersionEqualWith = (
 	b: CdkEngineVersion,
 ) => isEqualWith(a, b, compareEngineVersions);
 
-export const CDK_LIB_INTERNALS_PATH = {
-	get rdsInstanceEngineDeclaration() {
-		return join(
+export const CDK_LIB_INSTANCE_ENGINE_PATH = {
+	get auto() {
+		return this.localClone;
+	},
+
+	get localClone() {
+		if (!require.main) throw new Error("require.main is undefined");
+
+		return resolve(
+			dirname(require.main.filename),
+			"../../..",
+			"aws-cdk/packages/aws-cdk-lib/aws-rds/lib/instance-engine.d.ts",
+		);
+	},
+	get dependency() {
+		return resolve(
 			dirname(require.resolve("aws-cdk-lib")),
 			"aws-rds/lib/instance-engine.d.ts",
 		);
 	},
 };
-export interface DeprecableEngineVersion {
-	engineVersion: CdkEngineVersion;
+export interface DeprecableEngineVersion<T extends CdkEngineVersion = CdkEngineVersion> {
+	engineVersion: T;
 	isDeprecated: boolean;
 }
 
@@ -137,7 +150,7 @@ export function getCDKEngineVersions() {
 	const engineVersions: DeprecableEngineVersion[] = [];
 
 	const staticFields = getStaticFieldComments(
-		CDK_LIB_INTERNALS_PATH.rdsInstanceEngineDeclaration,
+		CDK_LIB_INSTANCE_ENGINE_PATH.auto,
 	);
 	for (const { className, fieldName, isDeprecated } of staticFields) {
 		if (className === "DatabaseInstanceEngine") continue;

@@ -85,13 +85,63 @@ const stringifyEngineVersion = (
 	{ engineVersion }: DeprecableEngineVersion,
 	engineKey: EngineKey,
 ) =>
-	`${engineKey}.${getVersionFromCdkEngineVersion(engineVersion).fullVersion}`;
+	`${engineKey}.${getVersionFromCdkEngineVersion(
+		engineVersion,
+	).fullVersion.replace(/\./g, "_")}`;
 
 const CONSOLE_SYMBOLS = {
 	ADD: chalk.green("[+]"),
 	DELETE: chalk.red("[-]"),
 	UPDATE: chalk.yellow("[~]"),
 };
+
+const getPostgresStaticComment = ({
+	engineVersion,
+	isDeprecated,
+}: DeprecableEngineVersion<PostgresEngineVersion>) =>
+	(isDeprecated
+		? /* ts */ `
+  /**
+   * Version "${engineVersion.postgresFullVersion}"
+   * @deprecated PostgreSQL ${engineVersion.postgresFullVersion} is no longer supported by Amazon RDS.
+   */
+`
+		: /* ts */ `
+  /** Version "${engineVersion.postgresFullVersion}". */
+`
+	).trim();
+
+const getPostgresStaticFeatures = ({
+	postgresFullVersion,
+}: PostgresEngineVersion) => {
+	const [majorVersion, minorVersion] = postgresFullVersion
+		.split(".")
+		.map(Number);
+	if (Number.isNaN(majorVersion) || Number.isNaN(minorVersion))
+		throw new Error(`Could not parse version ${postgresFullVersion}`);
+
+	if (majorVersion <= 9 || (majorVersion === 10 && minorVersion <= 6))
+		return "";
+
+	if (
+		(majorVersion === 10 && minorVersion <= 13) ||
+		(majorVersion === 11 && minorVersion <= 8) ||
+		(majorVersion === 12 && minorVersion <= 3)
+	)
+		// biome-ignore lint/style/noUnusedTemplateLiteral: Used for Comment tagged template
+		return /* ts */ `, { s3Import: true }`;
+
+	// biome-ignore lint/style/noUnusedTemplateLiteral: Used for Comment tagged template
+	return /* ts */ `, { s3Import: true, s3Export: true }`;
+};
+
+const getPostgresStatic = ({
+	engineVersion,
+	isDeprecated,
+}: DeprecableEngineVersion<PostgresEngineVersion>) => /* ts */ `
+  ${getPostgresStaticComment({ engineVersion, isDeprecated })}
+  public static readonly VER_${engineVersion.postgresFullVersion.replace(/\./g, '_')} = PostgresEngineVersion.of('${engineVersion.postgresFullVersion}', '${engineVersion.postgresMajorVersion}'${getPostgresStaticFeatures(engineVersion)});
+`;
 
 const runSdk = async ({ sdkEngines, cdkEngines, engineKey }: RunProps) => {
 	const guard = CdkEngineGuard[engineKey];
@@ -150,7 +200,7 @@ const runSdk = async ({ sdkEngines, cdkEngines, engineKey }: RunProps) => {
 export const run = async () => {
 	const cdkEngines = getCDKEngineVersions();
 
-	/* runSdk({
+	runSdk({
 		sdkEngines: await getSdkMysqlEngineVersions(),
 		cdkEngines,
 		engineKey: "MysqlEngineVersion",
@@ -159,7 +209,7 @@ export const run = async () => {
 		sdkEngines: await getSdkMariaDbEngineVersions(),
 		cdkEngines,
 		engineKey: "MariaDbEngineVersion",
-	}); */
+	});
 	runSdk({
 		sdkEngines: await getSdkPostgresEngineVersions(),
 		cdkEngines,

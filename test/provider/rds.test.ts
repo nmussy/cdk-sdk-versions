@@ -8,7 +8,7 @@ import "aws-sdk-client-mock-jest";
 import { join } from "path";
 import { getSdkMysqlEngineVersions } from "../../src/provider/rds";
 import {
-	CDK_LIB_INTERNALS_PATH,
+	CDK_LIB_INSTANCE_ENGINE_PATH,
 	getCDKEngineVersions,
 } from "../../src/util/provider/rds";
 
@@ -60,7 +60,7 @@ describe("SDK", () => {
 
 describe("CDK", () => {
 	const spy = jest
-		.spyOn(CDK_LIB_INTERNALS_PATH, "rdsInstanceEngineDeclaration", "get")
+		.spyOn(CDK_LIB_INSTANCE_ENGINE_PATH, "auto", "get")
 		.mockReturnValue(join(__dirname, "./mocked-instance-engine.d.ts"));
 
 	it("getCDKEngineVersions", () => {

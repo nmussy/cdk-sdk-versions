@@ -181,41 +181,48 @@ export function parseTSDoc(foundComment: IFoundComment) {
 	return parserContext.docComment;
 }
 
-export function parseSourceFile(filename: string, runCompiler = true) {
+export function parseSourceFile(
+	filename: string,
+	ignoreCompilationErrors = true,
+) {
 	const program = ts.createProgram([filename], {
 		target: ts.ScriptTarget.ESNext,
 		moduleResolution: ts.ModuleResolutionKind.NodeNext,
 	});
 
-	if (runCompiler) {
-		const compilerDiagnostics: ReadonlyArray<ts.Diagnostic> =
-			program.getSemanticDiagnostics();
-		if (compilerDiagnostics.length > 0) {
-			for (const diagnostic of compilerDiagnostics) {
-				const message: string = ts.flattenDiagnosticMessageText(
-					diagnostic.messageText,
-					"\n",
-				);
-				if (diagnostic.file) {
-					const location: ts.LineAndCharacter =
-						diagnostic.file.getLineAndCharacterOfPosition(
-							diagnostic.start ?? -1,
-						);
-					const formattedMessage: string =
-						`${diagnostic.file.fileName}(${location.line + 1},${
-							location.character + 1
-						}):` + ` [TypeScript] ${message}`;
-					throw new Error(formattedMessage);
-				}
+	const compilerDiagnostics: ReadonlyArray<ts.Diagnostic> =
+		program.getSemanticDiagnostics();
 
-				throw new Error(message);
+	if (!ignoreCompilationErrors) {
+		for (const diagnostic of compilerDiagnostics) {
+			const message: string = ts.flattenDiagnosticMessageText(
+				diagnostic.messageText,
+				"\n",
+			);
+			if (diagnostic.file) {
+				const location: ts.LineAndCharacter =
+					diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start ?? -1);
+				const formattedMessage: string =
+					`${diagnostic.file.fileName}(${location.line + 1},${
+						location.character + 1
+					}):` + ` [TypeScript] ${message}`;
+				console.error(formattedMessage);
 			}
+
+			console.error(message);
 		}
+
+		throw new Error(`Compilation errors for : ${filename}`);
 	}
+
+	if (compilerDiagnostics.length > 0)
+		console.warn(
+			`Ignored ${compilerDiagnostics.length} compilation errors for : ${filename}`,
+		);
 
 	const sourceFile: ts.SourceFile | undefined = program.getSourceFile(filename);
 	if (!sourceFile) {
-		throw new Error("Error retrieving source file");
+		throw new Error(`Error retrieving source file: ${filename}`);
 	}
 
 	return sourceFile;
