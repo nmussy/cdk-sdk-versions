@@ -282,3 +282,59 @@ export function getStaticFieldComments(filename: string) {
 
 	return foundFields;
 }
+
+const ENUM_EXPRESSION_REGEX = /^export( declare)? enum (?<enumName>\w+)/;
+const MEMBER_EXPRESSION_REGEX =
+	/^(?<memberName>\w+)\s*=\s*"(?<memberValue>[\w-]+)"/;
+
+export interface IEnumMember {
+	enumName: string;
+	memberName: string;
+	memberValue: string;
+	isDeprecated: boolean;
+}
+
+export function getEnumValuesComments(filename: string) {
+	const sourceFile = parseSourceFile(filename);
+	const foundComments: IFoundComment[] = [];
+
+	walkCompilerAstAndFindComments(sourceFile, "", foundComments, [
+		ts.SyntaxKind.EnumDeclaration,
+		ts.SyntaxKind.EnumMember,
+	]);
+
+	if (foundComments.length === 0) {
+		throw new Error("No code comments were found in the input file");
+	}
+
+	const foundMembers: IEnumMember[] = [];
+	for (const { compilerNode, textRange } of foundComments) {
+		if (compilerNode.kind !== ts.SyntaxKind.EnumMember) continue;
+
+		const memberMatch = compilerNode.getText().match(MEMBER_EXPRESSION_REGEX);
+		if (!memberMatch?.groups) continue;
+		const {
+			groups: { memberName, memberValue },
+		} = memberMatch;
+
+		const enumMatch = compilerNode.parent
+			.getText()
+			.match(ENUM_EXPRESSION_REGEX);
+		if (!enumMatch?.groups) continue;
+		const {
+			groups: { enumName },
+		} = enumMatch;
+
+		const isDeprecated = !!parseTSDoc({ compilerNode, textRange })
+			.deprecatedBlock;
+
+		foundMembers.push({
+			enumName,
+			memberName,
+			memberValue,
+			isDeprecated,
+		});
+	}
+
+	return foundMembers;
+}
