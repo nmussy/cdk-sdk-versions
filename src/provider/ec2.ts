@@ -5,6 +5,7 @@ import {
 	paginateDescribeImages,
 	paginateDescribeInstanceTypes,
 } from "@aws-sdk/client-ec2";
+import { InstanceClass, InstanceSize } from "aws-cdk-lib/aws-ec2";
 
 const client = new EC2Client({});
 export const getWindowsSsmImages = async () => {
@@ -25,28 +26,70 @@ export const getWindowsSsmImages = async () => {
 
 // console.log(WindowsVersion);
 
-export const getInstanceClasses = async () => {
-	const instanceClasses: InstanceTypeInfo[] = [];
+export const getInstanceComponentsFromTypeInfo = ({
+	InstanceType,
+}: InstanceTypeInfo) => {
+	const components = (InstanceType ?? "").split(".");
+	if (components.length !== 2) {
+		throw new Error(
+			`Cannot parse instance class and size for type ${InstanceType}`,
+		);
+	}
 
-	const instanceClassNames = new Set<string>();
+	const [instanceClass, instanceSize] = components;
+
+	return { instanceClass, instanceSize };
+};
+
+export const getInstanceTypeInfo = async () => {
+	const instanceTypes: InstanceTypeInfo[] = [];
 	const paginator = paginateDescribeInstanceTypes(
 		{ client, pageSize: 100 },
 		{},
 	);
 	for await (const { InstanceTypes = [] } of paginator) {
-		for (const instanceType of InstanceTypes) {
-			const [instanceClass] = (instanceType.InstanceType ?? "").split(".");
-			if (!instanceClass)
-				throw new Error(`Cannot parse instance class for type ${instanceType}`);
-
-			if (instanceClassNames.has(instanceClass)) continue;
-			instanceClassNames.add(instanceClass);
-
-			instanceClasses.push(instanceType);
-		}
+		instanceTypes.push(...InstanceTypes);
 	}
 
-	return instanceClasses;
+	return instanceTypes;
+};
+
+export const getInstanceClasses = (instanceTypes: InstanceTypeInfo[]) => {
+	const instanceClasses = new Set<string>();
+	for (const instanceType of instanceTypes) {
+		instanceClasses.add(
+			getInstanceComponentsFromTypeInfo(instanceType).instanceClass,
+		);
+	}
+
+	return Array.from(instanceClasses);
+};
+
+export const getInstanceSizes = (instanceTypes: InstanceTypeInfo[]) => {
+	const instanceSizes = new Set<string>();
+	for (const instanceType of instanceTypes) {
+		instanceSizes.add(
+			getInstanceComponentsFromTypeInfo(instanceType).instanceSize,
+		);
+	}
+
+	return Array.from(instanceSizes);
 };
 
 // console.log(InstanceClass);
+
+(async () => {
+	const instanceTypes = await getInstanceTypeInfo();
+
+	for (const instanceClass of getInstanceClasses(instanceTypes)) {
+		// @ts-ignore
+		if (!InstanceClass[instanceClass.toLocaleUpperCase()])
+			console.log("missing class", instanceClass);
+	}
+
+	for (const instanceSize of getInstanceSizes(instanceTypes)) {
+		// @ts-ignore
+		if (!InstanceSize[instanceSize.toLocaleUpperCase()])
+			console.log("missing size", instanceSize);
+	}
+})();
