@@ -3,11 +3,17 @@ import {
 	DescribeInstanceTypesCommand,
 	EC2Client,
 } from "@aws-sdk/client-ec2";
-import { InstanceClass, WindowsVersion } from "aws-cdk-lib/aws-ec2";
+import {
+	InstanceClass,
+	InstanceSize,
+	WindowsVersion,
+} from "aws-cdk-lib/aws-ec2";
 import { mockClient } from "aws-sdk-client-mock";
 import "aws-sdk-client-mock-jest";
 import {
 	getInstanceClasses,
+	getInstanceSizes,
+	getInstanceTypeInfo,
 	getWindowsSsmImages,
 } from "../../src/provider/ec2";
 
@@ -48,13 +54,36 @@ describe("SDK", () => {
 			],
 		});
 
-		const instanceClasses = await getInstanceClasses();
+		const instanceTypes = await getInstanceTypeInfo();
 		expect(ec2Mock).toHaveReceivedCommandTimes(DescribeInstanceTypesCommand, 1);
+
+		const instanceClasses = getInstanceClasses(instanceTypes);
 
 		expect(instanceClasses).toHaveLength(2);
 
 		const [first, second] = instanceClasses;
-		expect(first.InstanceType).toMatch(InstanceClass.T2);
-		expect(second.InstanceType).toMatch(InstanceClass.C5A);
+		expect(first).toMatch(InstanceClass.T2);
+		expect(second).toMatch(InstanceClass.C5A);
+	});
+
+	it("getInstanceSizes", async () => {
+		ec2Mock.on(DescribeInstanceTypesCommand).resolves({
+			InstanceTypes: [
+				{ InstanceType: "t2.micro" },
+				{ InstanceType: "t2.small" },
+				{ InstanceType: "t3a.small" },
+			],
+		});
+
+		const instanceTypes = await getInstanceTypeInfo();
+		expect(ec2Mock).toHaveReceivedCommandTimes(DescribeInstanceTypesCommand, 1);
+
+		const instanceSizes = getInstanceSizes(instanceTypes);
+
+		expect(instanceSizes).toHaveLength(2);
+
+		const [first, second] = instanceSizes;
+		expect(first).toMatch(InstanceSize.MICRO);
+		expect(second).toMatch(InstanceSize.SMALL);
 	});
 });

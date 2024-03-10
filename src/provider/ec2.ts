@@ -5,7 +5,11 @@ import {
 	paginateDescribeImages,
 	paginateDescribeInstanceTypes,
 } from "@aws-sdk/client-ec2";
-import { InstanceClass, InstanceSize } from "aws-cdk-lib/aws-ec2";
+import {
+	InstanceClass,
+	InstanceSize,
+	WindowsVersion,
+} from "aws-cdk-lib/aws-ec2";
 
 const client = new EC2Client({});
 export const getWindowsSsmImages = async () => {
@@ -23,8 +27,6 @@ export const getWindowsSsmImages = async () => {
 
 	return images;
 };
-
-// console.log(WindowsVersion);
 
 export const getInstanceComponentsFromTypeInfo = ({
 	InstanceType,
@@ -76,20 +78,36 @@ export const getInstanceSizes = (instanceTypes: InstanceTypeInfo[]) => {
 	return Array.from(instanceSizes);
 };
 
-// console.log(InstanceClass);
+const runWindowsSsmImages = async () => {
+	const images = await getWindowsSsmImages();
 
-(async () => {
+	for (const image of images) {
+		if (!image.Name) throw new Error("Image name is missing");
+
+		if (image.State !== "available") {
+			console.warn("Image is not available", image.Name);
+			continue;
+		}
+
+		if (!(image.Name in WindowsVersion)) {
+			console.log("missing version", image.Name);
+		}
+	}
+};
+
+const runInstanceType = async () => {
 	const instanceTypes = await getInstanceTypeInfo();
 
 	for (const instanceClass of getInstanceClasses(instanceTypes)) {
-		// @ts-ignore
-		if (!InstanceClass[instanceClass.toLocaleUpperCase()])
+		if (!(instanceClass.toLocaleUpperCase() in InstanceClass))
 			console.log("missing class", instanceClass);
 	}
 
 	for (const instanceSize of getInstanceSizes(instanceTypes)) {
-		// @ts-ignore
-		if (!InstanceSize[instanceSize.toLocaleUpperCase()])
+		if (!(instanceSize.toLocaleUpperCase() in InstanceSize))
 			console.log("missing size", instanceSize);
 	}
-})();
+};
+
+// if (process.env.NODE_ENV !== "test") void runWindowsSsmImages();
+// if (process.env.NODE_ENV !== "test") void runInstanceType();
