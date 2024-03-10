@@ -155,11 +155,8 @@ describe("CDK", () => {
 			expect(cdkInstanceClasses).toHaveLength(2);
 
 			const [first, second] = cdkInstanceClasses;
-			expect(first.instanceClass).toBe(InstanceClass.STANDARD3);
-			expect(first.isDeprecated).toBe(false);
-
-			expect(second.instanceClass).toBe(InstanceClass.M4);
-			expect(second.isDeprecated).toBe(false);
+			expect(first).toBe(InstanceClass.M3);
+			expect(second).toBe(InstanceClass.M4);
 		});
 
 		it("should extract getCDKInstanceClasses from .d.ts", () => {
@@ -173,11 +170,8 @@ describe("CDK", () => {
 			expect(cdkInstanceClasses).toHaveLength(2);
 
 			const [first, second] = cdkInstanceClasses;
-			expect(first.instanceClass).toBe(InstanceClass.STANDARD3);
-			expect(first.isDeprecated).toBe(false);
-
-			expect(second.instanceClass).toBe(InstanceClass.M4);
-			expect(second.isDeprecated).toBe(false);
+			expect(first).toBe(InstanceClass.M3);
+			expect(second).toBe(InstanceClass.M4);
 		});
 	});
 
@@ -193,11 +187,8 @@ describe("CDK", () => {
 			expect(cdkInstanceSizes).toHaveLength(2);
 
 			const [first, second] = cdkInstanceSizes;
-			expect(first.instanceSize).toBe(InstanceSize.NANO);
-			expect(first.isDeprecated).toBe(false);
-
-			expect(second.instanceSize).toBe(InstanceSize.MICRO);
-			expect(second.isDeprecated).toBe(false);
+			expect(first).toBe(InstanceSize.NANO);
+			expect(second).toBe(InstanceSize.MICRO);
 		});
 
 		it("should extract getCDKInstanceSizes from .d.ts", () => {
@@ -211,11 +202,8 @@ describe("CDK", () => {
 			expect(cdkInstanceSizes).toHaveLength(2);
 
 			const [first, second] = cdkInstanceSizes;
-			expect(first.instanceSize).toBe(InstanceSize.NANO);
-			expect(first.isDeprecated).toBe(false);
-
-			expect(second.instanceSize).toBe(InstanceSize.MICRO);
-			expect(second.isDeprecated).toBe(false);
+			expect(first).toBe(InstanceSize.NANO);
+			expect(second).toBe(InstanceSize.MICRO);
 		});
 	});
 });

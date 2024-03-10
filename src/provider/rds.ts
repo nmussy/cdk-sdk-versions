@@ -12,8 +12,8 @@ import {
 	PostgresEngineVersion,
 	SqlServerEngineVersion,
 } from "aws-cdk-lib/aws-rds";
-import chalk from "chalk";
 import { uniqBy } from "lodash";
+import { CONSOLE_SYMBOLS } from "../util";
 import {
 	CdkEngineGuard,
 	CdkEngineVersion,
@@ -129,12 +129,6 @@ const stringifyEngineVersion = (
 	`${engineKey}.${getVersionFromCdkEngineVersion(engineVersion)
 		.fullVersion.toLocaleUpperCase()
 		.replace(/\./g, "_")}`;
-
-const CONSOLE_SYMBOLS = {
-	ADD: chalk.green("[+]"),
-	DELETE: chalk.red("[-]"),
-	UPDATE: chalk.yellow("[~]"),
-};
 
 const humanName: Record<EngineKey, string> = {
 	PostgresEngineVersion: "PostgreSQL",
@@ -311,9 +305,9 @@ const runSdk = async ({ sdkEngines, cdkEngines, engineKey }: RunProps) => {
 		if (!guard(sdkEngine.engineVersion)) continue;
 		if (
 			engineKey === "PostgresEngineVersion" &&
-			(
-				sdkEngine.engineVersion as PostgresEngineVersion
-			).postgresFullVersion.startsWith("9.4.")
+			(sdkEngine.engineVersion as PostgresEngineVersion).postgresFullVersion
+				// PSQL 9.4 was never added to the CDK, as they were deprecated from the start
+				.startsWith("9.4.")
 		)
 			continue;
 

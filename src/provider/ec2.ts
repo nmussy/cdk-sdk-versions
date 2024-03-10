@@ -10,6 +10,12 @@ import {
 	InstanceSize,
 	WindowsVersion,
 } from "aws-cdk-lib/aws-ec2";
+import { CONSOLE_SYMBOLS } from "../util";
+import {
+	InstanceClassIgnoredValues,
+	getCDKInstanceClasses,
+	getCDKInstanceSizes,
+} from "../util/provider/ec2";
 
 const client = new EC2Client({});
 export const getWindowsSsmImages = async () => {
@@ -57,10 +63,11 @@ export const getInstanceTypeInfo = async () => {
 };
 
 export const getInstanceClasses = (instanceTypes: InstanceTypeInfo[]) => {
-	const instanceClasses = new Set<string>();
+	const instanceClasses = new Set<InstanceClass>();
 	for (const instanceType of instanceTypes) {
 		instanceClasses.add(
-			getInstanceComponentsFromTypeInfo(instanceType).instanceClass,
+			getInstanceComponentsFromTypeInfo(instanceType)
+				.instanceClass as InstanceClass,
 		);
 	}
 
@@ -68,10 +75,11 @@ export const getInstanceClasses = (instanceTypes: InstanceTypeInfo[]) => {
 };
 
 export const getInstanceSizes = (instanceTypes: InstanceTypeInfo[]) => {
-	const instanceSizes = new Set<string>();
+	const instanceSizes = new Set<InstanceSize>();
 	for (const instanceType of instanceTypes) {
 		instanceSizes.add(
-			getInstanceComponentsFromTypeInfo(instanceType).instanceSize,
+			getInstanceComponentsFromTypeInfo(instanceType)
+				.instanceSize as InstanceSize,
 		);
 	}
 
@@ -95,19 +103,48 @@ const runWindowsSsmImages = async () => {
 	}
 };
 
-const runInstanceType = async () => {
-	const instanceTypes = await getInstanceTypeInfo();
+const runInstanceClasses = async () => {
+	const sdkInstanceClasses = getInstanceClasses(await getInstanceTypeInfo());
+	const cdkInstanceClasses = getCDKInstanceClasses();
 
-	for (const instanceClass of getInstanceClasses(instanceTypes)) {
-		if (!(instanceClass.toLocaleUpperCase() in InstanceClass))
-			console.log("missing class", instanceClass);
+	for (const cdkInstanceClass of cdkInstanceClasses) {
+		// Instance classes do not get deprecated, they should never "disappear"
+		// If a class is missing, it's likely it needs to be added to
+		// InstanceClassSymbolicValues or InstanceClassIgnoredValues
+		if (!sdkInstanceClasses.includes(cdkInstanceClass)) {
+			console.log(CONSOLE_SYMBOLS.WARNING, cdkInstanceClass);
+		}
 	}
 
-	for (const instanceSize of getInstanceSizes(instanceTypes)) {
-		if (!(instanceSize.toLocaleUpperCase() in InstanceSize))
-			console.log("missing size", instanceSize);
+	for (const sdkInstanceClass of sdkInstanceClasses) {
+		if (InstanceClassIgnoredValues.includes(sdkInstanceClass)) continue;
+
+		if (!cdkInstanceClasses.includes(sdkInstanceClass)) {
+			console.log(CONSOLE_SYMBOLS.ADD, sdkInstanceClass);
+		}
+	}
+};
+
+const runInstanceSizes = async () => {
+	const sdkInstanceSizes = getInstanceSizes(await getInstanceTypeInfo());
+	const cdkInstanceSizes = getCDKInstanceSizes();
+
+	for (const cdkInstanceSize of cdkInstanceSizes) {
+		// Instance sizes do not get deprecated, they should never "disappear"
+		if (!sdkInstanceSizes.includes(cdkInstanceSize)) {
+			console.log(CONSOLE_SYMBOLS.WARNING, cdkInstanceSize);
+		}
+	}
+
+	for (const sdkInstanceSize of sdkInstanceSizes) {
+		// if (InstanceSizeIgnoredValues.includes(sdkInstanceSize)) continue;
+
+		if (!cdkInstanceSizes.includes(sdkInstanceSize)) {
+			console.log(CONSOLE_SYMBOLS.ADD, sdkInstanceSize);
+		}
 	}
 };
 
 // if (process.env.NODE_ENV !== "test") void runWindowsSsmImages();
-// if (process.env.NODE_ENV !== "test") void runInstanceType();
+if (process.env.NODE_ENV !== "test") void runInstanceClasses();
+if (process.env.NODE_ENV !== "test") void runInstanceSizes();

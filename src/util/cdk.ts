@@ -43,7 +43,8 @@ export class CdkLibPath extends CdkPath {
 			dirname(require.main.filename),
 			"../../..",
 			"aws-cdk/packages/aws-cdk-lib",
-			this.filePath,
+			// Prefer .ts over .d.ts to skip build step
+			this.filePath.replace(/\.d\.ts$/, ".ts"),
 		);
 	}
 

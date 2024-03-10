@@ -285,7 +285,7 @@ export function getStaticFieldComments(filename: string) {
 
 const ENUM_EXPRESSION_REGEX = /^export( declare)? enum (?<enumName>\w+)/;
 const MEMBER_EXPRESSION_REGEX =
-	/^(?<memberName>\w+)\s*=\s*"(?<memberValue>[\w-]+)"/;
+	/^(?<memberName>\w+)\s*=\s*['"](?<memberValue>[\w-]+)['"]/;
 
 export interface IEnumMember {
 	enumName: string;
