@@ -10,28 +10,20 @@ import {
 import { mockClient } from "aws-sdk-client-mock";
 import "aws-sdk-client-mock-jest";
 import { join } from "path";
-import { getSdkMysqlEngineVersions } from "../../src/provider/rds";
+import { getSdkMysqlEngineVersions } from "../../../src/provider/rds";
 import {
 	CDK_LIB_CLUSTER_ENGINE_PATH,
 	CDK_LIB_INSTANCE_ENGINE_PATH,
 	getCDKClusterEngineVersions,
 	getCDKInstanceEngineVersions,
-} from "../../src/util/provider/rds";
+} from "../../../src/util/provider/rds";
 
 const rdsMock = mockClient(RDSClient);
-
 beforeEach(() => {
 	rdsMock.reset();
 });
 
 describe("SDK", () => {
-	afterEach(() => {
-		expect(rdsMock).toHaveReceivedCommandTimes(
-			DescribeDBEngineVersionsCommand,
-			1,
-		);
-	});
-
 	it("getMysqlEngineVersions", async () => {
 		rdsMock.on(DescribeDBEngineVersionsCommand).resolves({
 			DBEngineVersions: [
@@ -51,6 +43,10 @@ describe("SDK", () => {
 		});
 
 		const versions = await getSdkMysqlEngineVersions();
+		expect(rdsMock).toHaveReceivedCommandTimes(
+			DescribeDBEngineVersionsCommand,
+			1,
+		);
 		expect(versions).toHaveLength(2);
 
 		const [first, second] = versions;
