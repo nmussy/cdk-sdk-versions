@@ -8,7 +8,7 @@ import {
 	SqlServerEngineVersion,
 } from "aws-cdk-lib/aws-rds";
 import { isEqualWith } from "lodash";
-import { dirname, resolve } from "path";
+import { CdkLibPath } from "../cdk";
 import { getStaticFieldComments } from "../tsdoc";
 
 export enum RdsEngine {
@@ -163,49 +163,12 @@ export const isEngineVersionEqualWith = (
 	b: CdkEngineVersion,
 ) => isEqualWith(a, b, compareEngineVersions);
 
-export const CDK_LIB_INSTANCE_ENGINE_PATH = {
-	get auto() {
-		return this.localClone;
-	},
-
-	get localClone() {
-		if (!require.main) throw new Error("require.main is undefined");
-
-		return resolve(
-			dirname(require.main.filename),
-			"../../..",
-			"aws-cdk/packages/aws-cdk-lib/aws-rds/lib/instance-engine.ts",
-		);
-	},
-	get dependency() {
-		return resolve(
-			dirname(require.resolve("aws-cdk-lib")),
-			"aws-rds/lib/instance-engine.d.ts",
-		);
-	},
-};
-
-export const CDK_LIB_CLUSTER_ENGINE_PATH = {
-	get auto() {
-		return this.localClone;
-	},
-
-	get localClone() {
-		if (!require.main) throw new Error("require.main is undefined");
-
-		return resolve(
-			dirname(require.main.filename),
-			"../../..",
-			"aws-cdk/packages/aws-cdk-lib/aws-rds/lib/cluster-engine.ts",
-		);
-	},
-	get dependency() {
-		return resolve(
-			dirname(require.resolve("aws-cdk-lib")),
-			"aws-rds/lib/cluster-engine.d.ts",
-		);
-	},
-};
+export const CDK_LIB_INSTANCE_ENGINE_PATH = new CdkLibPath(
+	"aws-rds/lib/instance-engine.d.ts",
+);
+export const CDK_LIB_CLUSTER_ENGINE_PATH = new CdkLibPath(
+	"aws-rds/lib/cluster-engine.d.ts",
+);
 
 export interface DeprecableEngineVersion<
 	T extends CdkEngineVersion = CdkEngineVersion,
@@ -229,7 +192,7 @@ const getVersion = <T extends CdkEngineVersionType = CdkEngineVersion>(
 	if (className === "OracleEngineVersion") {
 		fullVersion = fullVersion.replace(
 			// Add 'ru-' and 'rur-' prefixes to the last three parts
-			/\.(\d{4})\.(\d{2})\.R(\w+)$/,
+			/\.(\d{4})\.(\d{2})\.[rR](\w+)$/,
 			".ru-$1-$2.rur-$1-$2.r$3",
 		);
 	}

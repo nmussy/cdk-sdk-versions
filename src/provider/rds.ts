@@ -202,7 +202,7 @@ const _getStaticInstance = (
 		.toLocaleUpperCase()
 		.replace(/\.|-/g, "_")
 		.replace(
-			/RU.+RUR_/,
+			/RU.+RUR[_-]/,
 			"",
 		)} = ${engineKey}.of('${fullVersion}', '${majorVersion}');
 `;
@@ -384,5 +384,5 @@ export const runClusterEngine = async () => {
 	});
 };
 
-// if (process.env.NODE_ENV !== "test") void runInstanceEngine();
+if (process.env.NODE_ENV !== "test") void runInstanceEngine();
 // if (process.env.NODE_ENV !== "test") void runClusterEngine();
