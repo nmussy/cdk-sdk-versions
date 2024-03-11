@@ -236,11 +236,12 @@ export function parseSourceFile(
 
 const CLASS_EXPRESSION_REGEX = /^export( declare)? class (?<className>\w+)/;
 const PROPERTY_EXPRESSION_REGEX =
-	/^(public )?static readonly (?<fieldName>\w+)(:| =)/;
+	/^(public )?static readonly (?<fieldName>\w+)(:| =)\s*(?<fieldValue>.+);/;
 
 export interface IStaticField {
 	className: string;
 	fieldName: string;
+	fieldValue: string;
 	isDeprecated: boolean;
 }
 
@@ -265,7 +266,7 @@ export function getStaticFieldComments(filename: string) {
 		const fieldMatch = compilerNode.getText().match(PROPERTY_EXPRESSION_REGEX);
 		if (!fieldMatch?.groups) continue;
 		const {
-			groups: { fieldName },
+			groups: { fieldName, fieldValue },
 		} = fieldMatch;
 
 		const classMatch = compilerNode.parent
@@ -288,9 +289,15 @@ export function getStaticFieldComments(filename: string) {
 			continue;
 		}
 
+		if (!fieldValue)
+			throw new Error(
+				"Field value is empty: " + JSON.stringify(fieldMatch.groups),
+			);
+
 		foundFields.push({
 			className,
 			fieldName,
+			fieldValue,
 			isDeprecated,
 		});
 	}

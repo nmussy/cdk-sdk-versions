@@ -36,13 +36,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-msk-alpha@npm:^2.131.0-alpha.0":
-  version: 2.131.0-alpha.0
-  resolution: "@aws-cdk/aws-msk-alpha@npm:2.131.0-alpha.0"
+"@aws-cdk/aws-msk-alpha@npm:^2.132.0-alpha.0":
+  version: 2.132.0-alpha.0
+  resolution: "@aws-cdk/aws-msk-alpha@npm:2.132.0-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.131.0
+    aws-cdk-lib: ^2.132.0
     constructs: ^10.0.0
-  checksum: 10c0/9401450f781d3aed907f7f09f9640bc1faaff3f502f879917340890cc515f676bdc91d96fde865034a1cd59e276680985f0dc0de5bcb23aa6b87b2ca57992cc6
+  checksum: 10c0/6574c4ef4f82e40889b32d12080d1214411d5b4d1751d919b0db35ec382cde46b84d2438a1f9b1e0a8ff30a3d279fffdab7c6f5541db4df85857f481e622d750
   languageName: node
   linkType: hard
 
@@ -3671,7 +3671,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "cdk-sdk-versions@workspace:."
   dependencies:
-    "@aws-cdk/aws-msk-alpha": "npm:^2.131.0-alpha.0"
+    "@aws-cdk/aws-msk-alpha": "npm:^2.132.0-alpha.0"
     "@aws-sdk/client-codebuild": "npm:^3.530.0"
     "@aws-sdk/client-ec2": "npm:^3.525.1"
     "@aws-sdk/client-eks": "npm:^3.525.0"

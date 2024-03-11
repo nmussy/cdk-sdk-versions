@@ -1,6 +1,7 @@
 import { dirname, resolve } from "path";
 
 export class CdkPath {
+	protected moduleName = "aws-cdk";
 	constructor(protected readonly filePath: string) {}
 
 	get auto() {
@@ -13,7 +14,6 @@ export class CdkPath {
 				return this.dependency;
 		}
 	}
-
 	get localClone() {
 		if (!require.main) throw new Error("require.main is undefined");
 
@@ -21,6 +21,7 @@ export class CdkPath {
 			dirname(require.main.filename),
 			"../../..",
 			"aws-cdk",
+			this.moduleName !== "aws-cdk" ? `packages/${this.moduleName}` : "",
 			// Prefer .ts over .d.ts to skip build step
 			this.filePath.replace(/\.d\.ts$/, ".ts"),
 		);
@@ -28,10 +29,17 @@ export class CdkPath {
 
 	get dependency() {
 		return resolve(
-			dirname(require.resolve("aws-cdk")),
-			"aws-cdk",
+			dirname(require.resolve(this.moduleName)),
+			this.moduleName === "aws-cdk" ? "aws-cdk" : "",
 			this.filePath,
 		);
+	}
+}
+
+export class CdkModulePath extends CdkPath {
+	constructor(moduleName: string, filePath: string) {
+		super(filePath);
+		this.moduleName = moduleName;
 	}
 }
 
