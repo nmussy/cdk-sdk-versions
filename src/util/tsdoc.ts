@@ -82,7 +82,7 @@ function getJSDocCommentRanges(node: ts.Node, text: string): ts.CommentRange[] {
 
 interface IFoundComment {
 	compilerNode: ts.Node;
-	textRange: tsdoc.TextRange;
+	textRange?: tsdoc.TextRange;
 }
 
 export function walkCompilerAstAndFindComments(
@@ -126,9 +126,13 @@ export function walkCompilerAstAndFindComments(
 				),
 			});
 		}
-	}
 
-	// console.log(`${indent}- ${ts.SyntaxKind[node.kind]}${foundCommentsSuffix}`);
+		if (!comments.length) {
+			foundComments.push({
+				compilerNode: node,
+			});
+		}
+	}
 
 	for (const child of node.getChildren())
 		walkCompilerAstAndFindComments(
@@ -140,6 +144,8 @@ export function walkCompilerAstAndFindComments(
 }
 
 export function parseTSDoc(foundComment: IFoundComment) {
+	if (!foundComment.textRange) return;
+
 	const customConfiguration: tsdoc.TSDocConfiguration =
 		new tsdoc.TSDocConfiguration();
 
@@ -271,7 +277,16 @@ export function getStaticFieldComments(filename: string) {
 		} = classMatch;
 
 		const isDeprecated = !!parseTSDoc({ compilerNode, textRange })
-			.deprecatedBlock;
+			?.deprecatedBlock;
+
+		const existingField = foundFields.find(
+			(member) =>
+				member.className === className && member.fieldName === fieldName,
+		);
+		if (existingField) {
+			if (isDeprecated) existingField.isDeprecated = true;
+			continue;
+		}
 
 		foundFields.push({
 			className,
@@ -285,7 +300,7 @@ export function getStaticFieldComments(filename: string) {
 
 const ENUM_EXPRESSION_REGEX = /^export( declare)? enum (?<enumName>\w+)/;
 const MEMBER_EXPRESSION_REGEX =
-	/^(?<memberName>\w+)\s*=\s*['"](?<memberValue>[\w-]+)['"]/;
+	/^(?<memberName>\w+)\s*=\s*['"](?<memberValue>[\w-.]+)['"]/;
 
 export interface IEnumMember {
 	enumName: string;
@@ -326,7 +341,16 @@ export function getEnumValuesComments(filename: string) {
 		} = enumMatch;
 
 		const isDeprecated = !!parseTSDoc({ compilerNode, textRange })
-			.deprecatedBlock;
+			?.deprecatedBlock;
+
+		const existingMember = foundMembers.find(
+			(member) =>
+				member.enumName === enumName && member.memberName === memberName,
+		);
+		if (existingMember) {
+			if (isDeprecated) existingMember.isDeprecated = true;
+			continue;
+		}
 
 		foundMembers.push({
 			enumName,

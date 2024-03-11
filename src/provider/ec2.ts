@@ -5,21 +5,20 @@ import {
 	paginateDescribeImages,
 	paginateDescribeInstanceTypes,
 } from "@aws-sdk/client-ec2";
-import {
-	InstanceClass,
-	InstanceSize,
-	WindowsVersion,
-} from "aws-cdk-lib/aws-ec2";
+import { InstanceClass, InstanceSize } from "aws-cdk-lib/aws-ec2";
 import { CONSOLE_SYMBOLS } from "../util";
 import {
 	InstanceClassIgnoredValues,
 	getCDKInstanceClasses,
 	getCDKInstanceSizes,
+	getCDKWindowsVersions,
 } from "../util/provider/ec2";
 
 const client = new EC2Client({});
 export const getWindowsSsmImages = async () => {
 	const images: Image[] = [];
+	const imageNames = new Set<string>();
+
 	const paginator = paginateDescribeImages(
 		{ client, pageSize: 100 },
 		{
@@ -27,8 +26,16 @@ export const getWindowsSsmImages = async () => {
 			Filters: [{ Name: "name", Values: ["Windows_Server*"] }],
 		},
 	);
+
 	for await (const { Images = [] } of paginator) {
-		images.push(...Images);
+		for (const image of Images) {
+			if (!image.Name) continue;
+
+			if (!imageNames.has(image.Name)) {
+				imageNames.add(image.Name);
+				images.push(image);
+			}
+		}
 	}
 
 	return images;
@@ -86,19 +93,56 @@ export const getInstanceSizes = (instanceTypes: InstanceTypeInfo[]) => {
 	return Array.from(instanceSizes);
 };
 
-const runWindowsSsmImages = async () => {
-	const images = await getWindowsSsmImages();
+const getWindowsVersionEnumKey = (windowsVersion: string) =>
+	windowsVersion.toLocaleUpperCase().replace(/[-.]/g, "_");
 
-	for (const image of images) {
-		if (!image.Name) throw new Error("Image name is missing");
+const runWindows = async () => {
+	const sdkImages = await getWindowsSsmImages();
+	const cdkVersions = getCDKWindowsVersions();
 
-		if (image.State !== "available") {
-			console.warn("Image is not available", image.Name);
-			continue;
+	for (const cdkVersion of cdkVersions) {
+		const sdkImage = sdkImages.find(
+			({ Name = "" }) => cdkVersion.windowsVersion === Name,
+		);
+
+		const isSdkVersionDeprecated = sdkImage?.State !== "available";
+
+		if (!sdkImage) {
+			if (cdkVersion.isDeprecated) continue;
+
+			console.log(CONSOLE_SYMBOLS.DELETE, cdkVersion.windowsVersion);
+		} else if (!cdkVersion.isDeprecated && isSdkVersionDeprecated) {
+			console.log(
+				CONSOLE_SYMBOLS.UPDATE,
+				cdkVersion.windowsVersion,
+				"@deprecated",
+			);
+		} else if (cdkVersion.isDeprecated && !isSdkVersionDeprecated) {
+			console.log(
+				CONSOLE_SYMBOLS.UPDATE,
+				cdkVersion.windowsVersion,
+				"not @deprecated",
+			);
 		}
+	}
 
-		if (!(image.Name in WindowsVersion)) {
-			console.log("missing version", image.Name);
+	for (const sdkImage of sdkImages) {
+		if (!sdkImage.Name) continue;
+
+		const cdkVersion = cdkVersions.find(
+			({ windowsVersion }) => windowsVersion === sdkImage.Name,
+		);
+
+		if (!cdkVersion) {
+			const isSdkVersionDeprecated = sdkImage?.State !== "available";
+			console.log(
+				CONSOLE_SYMBOLS.ADD,
+				sdkImage.Name,
+				isSdkVersionDeprecated ? "@deprecated" : "",
+			);
+			console.log(
+				`${getWindowsVersionEnumKey(sdkImage.Name)} = '${sdkImage.Name}',`,
+			);
 		}
 	}
 };
@@ -145,6 +189,6 @@ const runInstanceSizes = async () => {
 	}
 };
 
-// if (process.env.NODE_ENV !== "test") void runWindowsSsmImages();
+if (process.env.NODE_ENV !== "test") void runWindows();
 if (process.env.NODE_ENV !== "test") void runInstanceClasses();
 if (process.env.NODE_ENV !== "test") void runInstanceSizes();

@@ -27,7 +27,7 @@ export const getCDKWindowsVersions = () => {
 				WindowsVersion[memberName as keyof typeof WindowsVersion];
 		} else {
 			console.warn(
-				`Unknown version: ${memberName}, replacing with ${memberName} = "${memberValue}`,
+				`Unknown version: ${memberName}, replacing with ${memberName} = "${memberValue}"`,
 			);
 			windowsVersion = memberValue as WindowsVersion;
 		}
