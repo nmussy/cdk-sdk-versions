@@ -1,6 +1,7 @@
 import { ECRClient, paginateListImages } from "@aws-sdk/client-ecr";
 import { EKSClient, paginateDescribeAddonVersions } from "@aws-sdk/client-eks";
-import { AlbControllerVersion } from "aws-cdk-lib/aws-eks";
+import { CONSOLE_SYMBOLS } from "../util";
+import { getCDKEKSAlbControllerVersions } from "../util/provider/eks";
 
 const eksClient = new EKSClient();
 const ecrClient = new ECRClient();
@@ -27,7 +28,31 @@ const getAlbControllerVersions = async () => {
 	return versions;
 };
 
-console.log(AlbControllerVersion);
+const runAlbController = async () => {
+	const sdkVersions = await getAlbControllerVersions();
+	const cdkVersions = getCDKEKSAlbControllerVersions();
+
+	for (const cdkVersion of cdkVersions) {
+		const sdkVersion = sdkVersions.find(
+			(version) => version === cdkVersion.engineVersion.version,
+		);
+
+		if (!sdkVersion) {
+			console.log(CONSOLE_SYMBOLS.DELETE, cdkVersion.engineVersion.version);
+		}
+	}
+
+	for (const sdkVersion of sdkVersions) {
+		if (sdkVersion.includes("-test")) continue;
+		const cdkVersion = cdkVersions.find(
+			({ engineVersion: { version } }) => version === sdkVersion,
+		);
+
+		if (!cdkVersion) {
+			console.log(CONSOLE_SYMBOLS.ADD, sdkVersion);
+		}
+	}
+};
 
 const getKubernetesVersions = async () => {
 	const versions = new Set<string>();
@@ -52,3 +77,5 @@ const getKubernetesVersions = async () => {
 };
 
 // console.log(KubernetesVersion);
+
+if (process.env.NODE_ENV !== "test") void runAlbController();
