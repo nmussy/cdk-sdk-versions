@@ -2,24 +2,17 @@ import {
 	CodeBuildClient,
 	ListCuratedEnvironmentImagesCommand,
 } from "@aws-sdk/client-codebuild";
-import {
-	LinuxArmBuildImage,
-	LinuxArmLambdaBuildImage,
-	LinuxBuildImage,
-	LinuxGpuBuildImage,
-	LinuxLambdaBuildImage,
-	WindowsBuildImage,
-} from "aws-cdk-lib/aws-codebuild";
+import { getCDKCodeBuildImages } from "../util/provider/codebuild";
 
 const client = new CodeBuildClient({});
 export const getBuildImages = async () =>
 	client.send(new ListCuratedEnvironmentImagesCommand({}));
 
-console.log(
-	WindowsBuildImage,
-	LinuxBuildImage,
-	LinuxArmBuildImage,
-	LinuxGpuBuildImage,
-	LinuxLambdaBuildImage,
-	LinuxArmLambdaBuildImage,
-);
+const runBuildImages = async () => {
+	// const { platforms: sdkImages } = await getBuildImages();
+	const cdkImages = getCDKCodeBuildImages();
+
+	console.log(cdkImages);
+};
+
+if (process.env.NODE_ENV !== "test") void runBuildImages();
