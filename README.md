@@ -59,10 +59,11 @@ These could be solved by adding an API endpoint to get the list of Amazon-provid
     * [`LambdaInsightsVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda.LambdaInsightsVersion.html)
         * `CLOUDWATCH_LAMBDA_INSIGHTS_ARNS`, see [docs](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-extension-versions.html)
 * AppConfig
-    * `appConfigLambdaLayerVersion`, `getLambdaLayerVersionArn`, currently not `enum` versioned
+    * [`getLambdaLayerVersionArn`](https://docs.aws.amazon.com/cdk/api/v2/docs/@aws-cdk_aws-appconfig-alpha.Application.html#static-getwbrlambdawbrlayerwbrversionwbrarnregion-platformspan-classapi-icon-api-icon-deprecated-titlethis-api-element-is-deprecated-its-use-is-not-recommended%EF%B8%8Fspan)
         * `APPCONFIG_LAMBDA_LAYER_ARNS`, see [docs](https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-integration-lambda-extensions-versions.html#appconfig-integration-lambda-extensions-versions-release-notes)
 * Secrets Manager
-    * `PARAMS_AND_SECRETS_LAMBDA_LAYER_ARNS`, see [docs](https://docs.aws.amazon.com/secretsmanager/latest/userguide/retrieving-secrets_lambda.html#retrieving-secrets_lambda_ARNs)
+    * [`ParamsAndSecretsLayerVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda.ParamsAndSecretsLayerVersion.html)
+        * `PARAMS_AND_SECRETS_LAMBDA_LAYER_ARNS`, see [docs](https://docs.aws.amazon.com/secretsmanager/latest/userguide/retrieving-secrets_lambda.html#retrieving-secrets_lambda_ARNs)
 * Lambda
     * [`AdotLambdaLayerGenericVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda.AdotLambdaLayerGenericVersion.html), [`AdotLambdaLayerJavaAutoInstrumentationVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda.AdotLambdaLayerJavaAutoInstrumentationVersion.html), etc.
         * `ADOT_LAMBDA_LAYER_ARNS`, [`AdotLambdaLayerGenericVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_lambda.AdotLambdaLayerGenericVersion.html). Might be able to use GH releases? https://github.com/open-telemetry/opentelemetry-java
