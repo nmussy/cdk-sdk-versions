@@ -291,7 +291,7 @@ export function getStaticFieldComments(filename: string) {
 
 		if (!fieldValue)
 			throw new Error(
-				"Field value is empty: " + JSON.stringify(fieldMatch.groups),
+				`Field value is empty: ${JSON.stringify(fieldMatch.groups)}`,
 			);
 
 		foundFields.push({
