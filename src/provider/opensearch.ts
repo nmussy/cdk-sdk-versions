@@ -2,7 +2,8 @@ import {
 	OpenSearchClient,
 	paginateListVersions,
 } from "@aws-sdk/client-opensearch";
-import { EngineVersion } from "aws-cdk-lib/aws-opensearchservice";
+import { CONSOLE_SYMBOLS } from "../util";
+import { getCDKOpenSearchEngineVersions } from "../util/provider/opensearch";
 
 const client = new OpenSearchClient();
 
@@ -15,10 +16,32 @@ const getSdkOpenSearchVersions = async () => {
 		versions.push(...Versions);
 	}
 
-	console.log(versions);
-
 	return versions;
 };
 
-console.log(EngineVersion);
-getSdkOpenSearchVersions();
+const runOpenSearch = async () => {
+	const cdkVersions = getCDKOpenSearchEngineVersions();
+	const sdkVersions = await getSdkOpenSearchVersions();
+
+	for (const cdkVersion of cdkVersions) {
+		const sdkVersion = sdkVersions.find(
+			(version) => version === cdkVersion.engineVersion.version,
+		);
+
+		if (!sdkVersion) {
+			console.log(CONSOLE_SYMBOLS.DELETE, cdkVersion.engineVersion.version);
+		}
+	}
+
+	for (const sdkVersion of sdkVersions) {
+		const cdkVersion = cdkVersions.find(
+			({ engineVersion: { version } }) => version === sdkVersion,
+		);
+
+		if (!cdkVersion) {
+			console.log(CONSOLE_SYMBOLS.ADD, sdkVersion);
+		}
+	}
+};
+
+if (process.env.NODE_ENV !== "test") void runOpenSearch();
