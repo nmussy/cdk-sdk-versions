@@ -36,13 +36,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-cdk/aws-msk-alpha@npm:^2.132.0-alpha.0":
-  version: 2.132.0-alpha.0
-  resolution: "@aws-cdk/aws-msk-alpha@npm:2.132.0-alpha.0"
+"@aws-cdk/aws-msk-alpha@npm:^2.132.1-alpha.0":
+  version: 2.132.1-alpha.0
+  resolution: "@aws-cdk/aws-msk-alpha@npm:2.132.1-alpha.0"
   peerDependencies:
-    aws-cdk-lib: ^2.132.0
+    aws-cdk-lib: ^2.132.1
     constructs: ^10.0.0
-  checksum: 10c0/6574c4ef4f82e40889b32d12080d1214411d5b4d1751d919b0db35ec382cde46b84d2438a1f9b1e0a8ff30a3d279fffdab7c6f5541db4df85857f481e622d750
+  checksum: 10c0/82ccfe65924a37163aeca63f9772bfa45877e83d58ea36f7cedb54fe125029571923c42929c72196efcf7a3cc0a21ed1583883b3cce5c3b4714952cf61b4a556
   languageName: node
   linkType: hard
 
@@ -3316,9 +3316,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aws-cdk-lib@npm:^2.131.0":
-  version: 2.131.0
-  resolution: "aws-cdk-lib@npm:2.131.0"
+"aws-cdk-lib@npm:^2.132.1":
+  version: 2.132.1
+  resolution: "aws-cdk-lib@npm:2.132.1"
   dependencies:
     "@aws-cdk/asset-awscli-v1": "npm:^2.2.202"
     "@aws-cdk/asset-kubectl-v20": "npm:^2.1.2"
@@ -3336,7 +3336,7 @@ __metadata:
     yaml: "npm:1.10.2"
   peerDependencies:
     constructs: ^10.0.0
-  checksum: 10c0/8c0377286e766144441c882ffddab97601d3d9562d22c008904716d0bdc4feb8302993e64b763ed61cfb564fcd74af723b9a003381d3da3dc8204dd2a1668a36
+  checksum: 10c0/e2da42d7fb72de40a4efed77b6d580d3b7e255f3129bcaf00724760e2717bdf17907f9317ee5316a2240b8b98bf37b502fd1a29aef522988ac0ddeee1e985626
   languageName: node
   linkType: hard
 
@@ -3671,7 +3671,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "cdk-sdk-versions@workspace:."
   dependencies:
-    "@aws-cdk/aws-msk-alpha": "npm:^2.132.0-alpha.0"
+    "@aws-cdk/aws-msk-alpha": "npm:^2.132.1-alpha.0"
     "@aws-sdk/client-codebuild": "npm:^3.530.0"
     "@aws-sdk/client-ec2": "npm:^3.525.1"
     "@aws-sdk/client-eks": "npm:^3.525.0"
@@ -3689,7 +3689,7 @@ __metadata:
     "@types/jest": "npm:^29.5.12"
     "@types/lodash": "npm:^4.14.202"
     "@types/node": "npm:^20.11.24"
-    aws-cdk-lib: "npm:^2.131.0"
+    aws-cdk-lib: "npm:^2.132.1"
     aws-sdk-client-mock: "npm:3.1.0-beta.1"
     aws-sdk-client-mock-jest: "npm:^3.0.1"
     chalk: "npm:^5.3.0"

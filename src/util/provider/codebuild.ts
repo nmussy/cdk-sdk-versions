@@ -21,7 +21,7 @@ export const CDK_LIB_CODEBUILD_LINUX_GPU_PATH = new CdkLibPath(
 	join(basePath, "linux-gpu-build-image.ts"),
 );
 export const CDK_LIB_CODEBUILD_LINUX_ARM_PATH = new CdkLibPath(
-	join(basePath, "linux-lambda-build-image.d.ts"),
+	join(basePath, "linux-arm-build-image.d.ts"),
 );
 export const CDK_LIB_CODEBUILD_LAMBDA_PATH = new CdkLibPath(
 	join(basePath, "linux-lambda-build-image.d.ts"),
@@ -60,8 +60,8 @@ export const getBuildClass = (imageClass: BuildImageClass) => {
 const imageBuildPath: { [image in BuildImageClass]: CdkPath } = {
 	WindowsBuildImage: CDK_LIB_CODEBUILD_PROJECT_PATH,
 	LinuxBuildImage: CDK_LIB_CODEBUILD_PROJECT_PATH,
-	LinuxArmBuildImage: CDK_LIB_CODEBUILD_LINUX_GPU_PATH,
-	LinuxGpuBuildImage: CDK_LIB_CODEBUILD_LINUX_ARM_PATH,
+	LinuxArmBuildImage: CDK_LIB_CODEBUILD_LINUX_ARM_PATH,
+	LinuxGpuBuildImage: CDK_LIB_CODEBUILD_LINUX_GPU_PATH,
 	LinuxLambdaBuildImage: CDK_LIB_CODEBUILD_LAMBDA_PATH,
 	LinuxArmLambdaBuildImage: CDK_LIB_CODEBUILD_LAMBDA_ARM_PATH,
 };
@@ -73,6 +73,8 @@ export interface DeprecablImage {
 
 const imageConstructorRegex =
 	/\w+.fromCodeBuildImageId\('(?<imageId>[\w.-]+)'\)/;
+
+const imageFromConstructorRegex = /^\s*imageId: '(?<imageId>[\w\/.:-]+)'/m;
 
 export const getCDKCodeBuildImages = () => {
 	const images: { [image in BuildImageClass]: DeprecablImage[] } = {
@@ -107,19 +109,20 @@ export const getCDKCodeBuildImages = () => {
 			if (fieldName in imageClass) {
 				image = imageClass[fieldName as keyof typeof imageClass];
 			} else {
-				throw new Error("Not implemented");
-				/* const match = fieldValue.match(imageConstructorRegex);
+				const match =
+					fieldValue.match(imageConstructorRegex) ??
+					fieldValue.match(imageFromConstructorRegex);
+
 				if (!match?.groups) throw new Error(`Unknown version: ${fieldValue}`);
 				const {
-					groups: { versionName, imageFamily },
+					groups: { imageId },
 				} = match;
 				console.warn(
-					`Unknown version: ${fieldName}, replacing with new Runtime("${versionName}", RuntimeFamily.${imageFamily})`,
+					`Unknown version: ${fieldName}, replacing with new ${className}("${imageId}")`,
 				);
-				image = new Runtime(
-					versionName,
-					RuntimeFamily[imageFamily as keyof typeof RuntimeFamily],
-				); */
+
+				// @ts-ignore private constructor
+				image = new imageClass(imageId);
 			}
 
 			images[imageClassName].push({ image, isDeprecated });

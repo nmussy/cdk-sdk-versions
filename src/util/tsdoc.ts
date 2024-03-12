@@ -218,12 +218,12 @@ export function parseSourceFile(
 			console.error(message);
 		}
 
-		throw new Error(`Compilation errors for : ${filename}`);
+		throw new Error(`Compilation errors for: ${filename}`);
 	}
 
 	if (compilerDiagnostics.length > 0)
 		console.warn(
-			`Ignored ${compilerDiagnostics.length} compilation errors for : ${filename}`,
+			`Ignored ${compilerDiagnostics.length} compilation errors for: ${filename}`,
 		);
 
 	const sourceFile: ts.SourceFile | undefined = program.getSourceFile(filename);
@@ -236,7 +236,7 @@ export function parseSourceFile(
 
 const CLASS_EXPRESSION_REGEX = /^export( declare)? class (?<className>\w+)/;
 const PROPERTY_EXPRESSION_REGEX =
-	/^(public )?static readonly (?<fieldName>\w+)(:| =)\s*(?<fieldValue>.+);/;
+	/^(public )?static readonly (?<fieldName>\w+)\s*(: \w+)?\s*(:|=)\s*(?<fieldValue>(.|\n)+)/m;
 
 export interface IStaticField {
 	className: string;
