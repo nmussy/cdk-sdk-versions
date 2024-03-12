@@ -78,7 +78,6 @@ export const getBuildImages = async () => {
 		WindowsBuildImage: [],
 		LinuxBuildImage: [],
 		LinuxArmBuildImage: [],
-		LinuxGpuBuildImage: [],
 		LinuxLambdaBuildImage: [],
 		LinuxArmLambdaBuildImage: [],
 	};
@@ -128,9 +127,9 @@ const runBuildImages = async () => {
 
 			if (!sdkImage) {
 				console.log(
-					CONSOLE_SYMBOLS.DELETE,
-					imageClassName,
-					cdkImage.image.imageId,
+					CONSOLE_SYMBOLS.UPDATE,
+					`${imageClassName}.${cdkImage.image.imageId}`,
+					"@deprecated",
 				);
 			}
 		}
@@ -141,7 +140,7 @@ const runBuildImages = async () => {
 			);
 
 			if (!cdkImage) {
-				console.log(CONSOLE_SYMBOLS.ADD, imageClassName, sdkImage);
+				console.log(CONSOLE_SYMBOLS.ADD, `${imageClassName}.${sdkImage}`);
 			}
 		}
 	}

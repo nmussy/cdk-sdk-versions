@@ -3,7 +3,6 @@ import {
 	LinuxArmBuildImage,
 	LinuxArmLambdaBuildImage,
 	LinuxBuildImage,
-	LinuxGpuBuildImage,
 	LinuxLambdaBuildImage,
 	WindowsBuildImage,
 } from "aws-cdk-lib/aws-codebuild";
@@ -16,9 +15,6 @@ const basePath = "aws-codebuild/lib";
 
 export const CDK_LIB_CODEBUILD_PROJECT_PATH = new CdkLibPath(
 	join(basePath, "project.d.ts"),
-);
-export const CDK_LIB_CODEBUILD_LINUX_GPU_PATH = new CdkLibPath(
-	join(basePath, "linux-gpu-build-image.ts"),
 );
 export const CDK_LIB_CODEBUILD_LINUX_ARM_PATH = new CdkLibPath(
 	join(basePath, "linux-arm-build-image.d.ts"),
@@ -34,7 +30,8 @@ export type BuildImageClass =
 	| "WindowsBuildImage"
 	| "LinuxBuildImage"
 	| "LinuxArmBuildImage"
-	| "LinuxGpuBuildImage"
+	// Pending https://github.com/aws/deep-learning-containers/issues/2732
+	// | "LinuxGpuBuildImage"
 	| "LinuxLambdaBuildImage"
 	| "LinuxArmLambdaBuildImage";
 
@@ -46,8 +43,6 @@ export const getBuildClass = (imageClass: BuildImageClass) => {
 			return LinuxBuildImage;
 		case "LinuxArmBuildImage":
 			return LinuxArmBuildImage;
-		case "LinuxGpuBuildImage":
-			return LinuxGpuBuildImage;
 		case "LinuxLambdaBuildImage":
 			return LinuxLambdaBuildImage;
 		case "LinuxArmLambdaBuildImage":
@@ -61,7 +56,6 @@ const imageBuildPath: { [image in BuildImageClass]: CdkPath } = {
 	WindowsBuildImage: CDK_LIB_CODEBUILD_PROJECT_PATH,
 	LinuxBuildImage: CDK_LIB_CODEBUILD_PROJECT_PATH,
 	LinuxArmBuildImage: CDK_LIB_CODEBUILD_LINUX_ARM_PATH,
-	LinuxGpuBuildImage: CDK_LIB_CODEBUILD_LINUX_GPU_PATH,
 	LinuxLambdaBuildImage: CDK_LIB_CODEBUILD_LAMBDA_PATH,
 	LinuxArmLambdaBuildImage: CDK_LIB_CODEBUILD_LAMBDA_ARM_PATH,
 };
@@ -81,7 +75,6 @@ export const getCDKCodeBuildImages = () => {
 		WindowsBuildImage: [],
 		LinuxBuildImage: [],
 		LinuxArmBuildImage: [],
-		LinuxGpuBuildImage: [],
 		LinuxLambdaBuildImage: [],
 		LinuxArmLambdaBuildImage: [],
 	};
