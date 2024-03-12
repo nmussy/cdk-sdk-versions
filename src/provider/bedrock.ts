@@ -18,10 +18,7 @@ export const getFoundationModels = async () => {
 	for (const model of models) {
 		const isDeprecated =
 			model.modelLifecycle?.status !== FoundationModelLifecycleStatus.ACTIVE;
-		console.log(
-			model.modelId,
-			model.modelLifecycle?.status !== FoundationModelLifecycleStatus.ACTIVE,
-		);
+		console.log(model.modelId, isDeprecated);
 	}
 })();
 
