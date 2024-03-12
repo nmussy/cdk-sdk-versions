@@ -114,6 +114,7 @@ export const getCDKCodeBuildImages = () => {
 					`Unknown version: ${fieldName}, replacing with new ${className}("${imageId}")`,
 				);
 
+				// FIXME cannot use .fromCodeBuildImageId(), missing from WindowsBuildImage
 				// @ts-ignore private constructor
 				image = new imageClass(imageId);
 			}
