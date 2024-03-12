@@ -30,7 +30,7 @@ export const CDK_LIB_CODEBUILD_LAMBDA_ARM_PATH = new CdkLibPath(
 	join(basePath, "linux-arm-lambda-build-image.d.ts"),
 );
 
-type BuildImageClass =
+export type BuildImageClass =
 	| "WindowsBuildImage"
 	| "LinuxBuildImage"
 	| "LinuxArmBuildImage"
@@ -66,7 +66,7 @@ const imageBuildPath: { [image in BuildImageClass]: CdkPath } = {
 	LinuxArmLambdaBuildImage: CDK_LIB_CODEBUILD_LAMBDA_ARM_PATH,
 };
 
-export interface DeprecablImage {
+export interface DeprecableImage {
 	image: IBuildImage;
 	isDeprecated: boolean;
 }
@@ -77,7 +77,7 @@ const imageConstructorRegex =
 const imageFromConstructorRegex = /^\s*imageId: '(?<imageId>[\w\/.:-]+)'/m;
 
 export const getCDKCodeBuildImages = () => {
-	const images: { [image in BuildImageClass]: DeprecablImage[] } = {
+	const images: { [image in BuildImageClass]: DeprecableImage[] } = {
 		WindowsBuildImage: [],
 		LinuxBuildImage: [],
 		LinuxArmBuildImage: [],
