@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import {
 	DescribeImagesCommand,
 	DescribeInstanceTypesCommand,
@@ -10,7 +11,6 @@ import {
 } from "aws-cdk-lib/aws-ec2";
 import { mockClient } from "aws-sdk-client-mock";
 import "aws-sdk-client-mock-jest";
-import { join } from "path";
 import {
 	getInstanceClasses,
 	getInstanceSizes,

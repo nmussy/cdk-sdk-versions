@@ -1,4 +1,6 @@
-import { dirname, resolve } from "path";
+import { dirname, join, resolve } from "node:path";
+
+const PROJECT_ROOT_PATH = join(__dirname, "../../../..");
 
 export class CdkPath {
 	protected moduleName = "aws-cdk";
@@ -15,11 +17,9 @@ export class CdkPath {
 		}
 	}
 	get localClone() {
-		if (!require.main) throw new Error("require.main is undefined");
-
-		return resolve(
-			dirname(require.main.filename),
-			"../../..",
+		return join(
+			PROJECT_ROOT_PATH,
+			"..",
 			"aws-cdk",
 			this.moduleName !== "aws-cdk" ? `packages/${this.moduleName}` : "",
 			// Prefer .ts over .d.ts to skip build step
@@ -45,11 +45,9 @@ export class CdkModulePath extends CdkPath {
 
 export class CdkLibPath extends CdkPath {
 	get localClone() {
-		if (!require.main) throw new Error("require.main is undefined");
-
-		return resolve(
-			dirname(require.main.filename),
-			"../../..",
+		return join(
+			PROJECT_ROOT_PATH,
+			"..",
 			"aws-cdk/packages/aws-cdk-lib",
 			// Prefer .ts over .d.ts to skip build step
 			this.filePath.replace(/\.d\.ts$/, ".ts"),

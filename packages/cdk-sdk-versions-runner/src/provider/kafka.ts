@@ -1,7 +1,7 @@
 import {
 	KafkaClient,
 	KafkaVersionStatus,
-	KafkaVersion as SDKKafkaVersion,
+	type KafkaVersion as SDKKafkaVersion,
 	paginateListKafkaVersions,
 } from "@aws-sdk/client-kafka";
 import { CONSOLE_SYMBOLS } from "../util";

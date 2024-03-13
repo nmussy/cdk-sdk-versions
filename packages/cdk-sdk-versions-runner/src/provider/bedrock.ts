@@ -3,7 +3,6 @@ import {
 	FoundationModelLifecycleStatus,
 	ListFoundationModelsCommand,
 } from "@aws-sdk/client-bedrock";
-import console from "console";
 import { CONSOLE_SYMBOLS } from "../util";
 import { getCDKFoundationModelIdentifiers } from "../util/provider/bedrock";
 
@@ -14,7 +13,7 @@ export const getFoundationModels = async () => {
 	return models.modelSummaries ?? [];
 };
 
-const runBedrock = async () => {
+export const runBedrock = async () => {
 	const sdkModels = await getFoundationModels();
 	const cdkModels = getCDKFoundationModelIdentifiers();
 

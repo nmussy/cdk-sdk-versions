@@ -1,6 +1,6 @@
 import {
 	CodeBuildClient,
-	EnvironmentLanguage,
+	type EnvironmentLanguage,
 	ListCuratedEnvironmentImagesCommand,
 } from "@aws-sdk/client-codebuild";
 import { Architecture } from "@aws-sdk/client-lambda";
@@ -8,7 +8,7 @@ import { groupBy, mapValues } from "lodash";
 import type { Entries } from "type-fest";
 import { CONSOLE_SYMBOLS } from "../util";
 import {
-	BuildImageClass,
+	type BuildImageClass,
 	getCDKCodeBuildImages,
 } from "../util/provider/codebuild";
 

@@ -1,5 +1,5 @@
 import {
-	DBEngineVersion,
+	type DBEngineVersion,
 	RDSClient,
 	paginateDescribeDBEngineVersions,
 } from "@aws-sdk/client-rds";
@@ -16,10 +16,10 @@ import { uniqBy } from "lodash";
 import { CONSOLE_SYMBOLS } from "../util";
 import {
 	CdkEngineGuard,
-	CdkEngineVersion,
-	CdkEngineVersionType,
-	DeprecableEngineVersion,
-	EngineKey,
+	type CdkEngineVersion,
+	type CdkEngineVersionType,
+	type DeprecableEngineVersion,
+	type EngineKey,
 	OracleEngines,
 	RdsEngine,
 	SqlServerEngines,

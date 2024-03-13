@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import {
 	DescribeDBEngineVersionsCommand,
 	RDSClient,
@@ -9,7 +10,6 @@ import {
 } from "aws-cdk-lib/aws-rds";
 import { mockClient } from "aws-sdk-client-mock";
 import "aws-sdk-client-mock-jest";
-import { join } from "path";
 import { getSdkMysqlEngineVersions } from "../../../src/provider/rds";
 import {
 	CDK_LIB_CLUSTER_ENGINE_PATH,

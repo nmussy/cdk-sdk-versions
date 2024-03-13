@@ -1,4 +1,4 @@
-import {
+import type {
 	InstanceEngineFeatures,
 	PostgresEngineFeatures,
 } from "aws-cdk-lib/aws-rds";

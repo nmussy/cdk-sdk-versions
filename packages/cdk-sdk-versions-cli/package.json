@@ -1,73 +1,31 @@
 {
-  "name": "cdk-sdk-versions-cli",
-  "version": "0.0.0",
-  "description": "oclif example Hello World CLI",
-  "keywords": [
-    "oclif"
-  ],
-  "homepage": "https://github.com/nmussy/cdk-sdk-versions",
-  "bugs": "https://github.com/nmussy/cdk-sdk-versions/issues",
-  "repository": "nmussy/cdk-sdk-versions",
-  "license": "MIT",
-  "author": "Jimmy Gaussen @nmussy",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "bin": {
-    "cdk-sdk-versions": "./bin/run.js"
-  },
-  "files": [
-    "/bin",
-    "/dist",
-    "/oclif.manifest.json"
-  ],
-  "scripts": {
-    "build": "shx rm -rf dist && tsc -b",
-    "lint": "eslint . --ext .ts",
-    "prepack": "yarn build && oclif manifest && oclif readme",
-    "postpack": "shx rm -f oclif.manifest.json",
-    "prepare": "yarn build",
-    "test": "mocha --forbid-only \"test/**/*.test.ts\"",
-    "posttest": "yarn lint",
-    "version": "oclif readme && git add README.md"
-  },
-  "oclif": {
-    "bin": "cdk-sdk-versions",
-    "commands": "./dist/commands",
-    "dirname": "cdk-sdk-versions",
-    "plugins": [
-      "@oclif/plugin-help",
-      "@oclif/plugin-plugins"
-    ],
-    "topicSeparator": " ",
-    "topics": {
-      "hello": {
-        "description": "Say hello to the world and others"
-      }
-    }
-  },
-  "dependencies": {
-    "@oclif/core": "^3",
-    "@oclif/plugin-help": "^6",
-    "@oclif/plugin-plugins": "^4"
-  },
-  "devDependencies": {
-    "@oclif/prettier-config": "^0.2.1",
-    "@oclif/test": "^3",
-    "@types/chai": "^4",
-    "@types/mocha": "^10.0.0",
-    "@types/node": "^18",
-    "chai": "^4",
-    "eslint": "^8.57.0",
-    "eslint-config-oclif": "^5",
-    "eslint-config-oclif-typescript": "^3",
-    "eslint-config-prettier": "^9.1.0",
-    "mocha": "^10",
-    "oclif": "^4",
-    "shx": "^0.3.3",
-    "ts-node": "^10.9.2",
-    "typescript": "^5"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+	"name": "cdk-sdk-versions-cli",
+	"packageManager": "yarn@4.1.1",
+	"main": "dist/cli.js",
+	"types": "dist/cli.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsc",
+		"watch": "tsc -w",
+		"test": "jest",
+		"check": "biome check src test",
+		"lint": "biome lint src test"
+	},
+	"dependencies": {
+		"cdk-sdk-versions-runner": "workspace:^",
+		"yargs": "^17.7.2"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^1.6.1",
+		"@types/jest": "^29.5.12",
+		"@types/node": "^20.11.26",
+		"@types/yargs": "^17.0.32",
+		"esbuild": "^0.20.1",
+		"esbuild-jest": "^0.5.0",
+		"jest": "^29.7.0",
+		"tsx": "^4.7.1",
+		"typescript": "^5.4.2"
+	}
 }

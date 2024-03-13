@@ -1,15 +1,15 @@
+import { join } from "node:path";
 import {
-	IBuildImage,
+	type IBuildImage,
 	LinuxArmBuildImage,
 	LinuxArmLambdaBuildImage,
 	LinuxBuildImage,
 	LinuxLambdaBuildImage,
 	WindowsBuildImage,
 } from "aws-cdk-lib/aws-codebuild";
-import { join } from "path";
 import type { Entries } from "type-fest";
-import { CdkLibPath, CdkPath } from "../cdk";
-import { IStaticField, getStaticFieldComments } from "../tsdoc";
+import { CdkLibPath, type CdkPath } from "../cdk";
+import { type IStaticField, getStaticFieldComments } from "../tsdoc";
 
 const basePath = "aws-codebuild/lib";
 

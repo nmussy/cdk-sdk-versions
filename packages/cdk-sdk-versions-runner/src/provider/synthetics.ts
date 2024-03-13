@@ -1,5 +1,5 @@
 import {
-	RuntimeVersion,
+	type RuntimeVersion,
 	SyntheticsClient,
 	paginateDescribeRuntimeVersions,
 } from "@aws-sdk/client-synthetics";
