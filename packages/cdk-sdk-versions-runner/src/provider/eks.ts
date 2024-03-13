@@ -1,6 +1,7 @@
 import { ECRClient, paginateListImages } from "@aws-sdk/client-ecr";
 import { EKSClient, paginateDescribeAddonVersions } from "@aws-sdk/client-eks";
-import { CONSOLE_SYMBOLS } from "../util";
+import type { AlbControllerVersion } from "aws-cdk-lib/aws-eks";
+import { CdkSdkVersionRunner } from "../runner";
 import { getCDKEKSAlbControllerVersions } from "../util/provider/eks";
 
 const eksClient = new EKSClient();
@@ -15,49 +16,48 @@ export const MISSING_IMAGE_TAG = "__MISSING_IMAGE_TAG__";
 // e.g. v2.0.0-rc5, v2.4.2-linux_amd64, v2.0.0-test-linux_amd64
 const validImageTagRegex = /^v\d+\.\d+\.\d+$/;
 
-const getAlbControllerVersions = async () => {
-	const versions: string[] = [];
-
-	const paginator = paginateListImages(
-		{ client: ecrClient, pageSize: 100 },
-		{ repositoryName, registryId },
-	);
-
-	for await (const { imageIds = [] } of paginator) {
-		versions.push(
-			...imageIds
-				.map(({ imageTag = MISSING_IMAGE_TAG }) => imageTag)
-				.filter((imageTag) => imageTag.match(validImageTagRegex)),
-		);
+export class EksAlbControllerRunner extends CdkSdkVersionRunner<
+	AlbControllerVersion,
+	string
+> {
+	constructor() {
+		super("EksAlbController");
 	}
 
-	return versions;
-};
+	protected getCdkVersions() {
+		return getCDKEKSAlbControllerVersions();
+	}
+	protected async fetchSdkVersions() {
+		const versions: string[] = [];
 
-const runAlbController = async () => {
-	const sdkVersions = await getAlbControllerVersions();
-	const cdkVersions = getCDKEKSAlbControllerVersions();
-
-	for (const cdkVersion of cdkVersions) {
-		const sdkVersion = sdkVersions.find(
-			(version) => version === cdkVersion.engineVersion.version,
+		const paginator = paginateListImages(
+			{ client: ecrClient, pageSize: 100 },
+			{ repositoryName, registryId },
 		);
 
-		if (!sdkVersion) {
-			console.log(CONSOLE_SYMBOLS.DELETE_BOX, cdkVersion.engineVersion.version);
+		for await (const { imageIds = [] } of paginator) {
+			versions.push(
+				...imageIds
+					.map(({ imageTag = MISSING_IMAGE_TAG }) => imageTag)
+					.filter((imageTag) => imageTag.match(validImageTagRegex)),
+			);
 		}
+
+		return versions.map((version) => ({ version, isDeprecated: false }));
 	}
 
-	for (const sdkVersion of sdkVersions) {
-		const cdkVersion = cdkVersions.find(
-			({ engineVersion: { version } }) => version === sdkVersion,
-		);
-
-		if (!cdkVersion) {
-			console.log(CONSOLE_SYMBOLS.ADD_BOX, sdkVersion);
-		}
+	protected stringifyCdkVersion({ version }: AlbControllerVersion) {
+		return version;
 	}
-};
+
+	protected stringifySdkVersion(version: string) {
+		return version;
+	}
+
+	protected compareCdkSdkVersions(cdk: AlbControllerVersion, sdk: string) {
+		return cdk.version === sdk;
+	}
+}
 
 const getKubernetesVersions = async () => {
 	const versions = new Set<string>();
@@ -80,7 +80,3 @@ const getKubernetesVersions = async () => {
 
 	return Array.from(versions);
 };
-
-// console.log(KubernetesVersion);
-
-if (process.env.NODE_ENV !== "test") void runAlbController();

@@ -1,4 +1,5 @@
 import { EngineVersion } from "aws-cdk-lib/aws-opensearchservice";
+import type { DeprecableVersion } from "../../runner";
 import { CdkLibPath } from "../cdk";
 import { getStaticFieldComments } from "../tsdoc";
 
@@ -6,24 +7,18 @@ export const CDK_LIB_OPENSEARCH_ENGINE_VERSION_PATH = new CdkLibPath(
 	"aws-opensearchservice/lib/version.d.ts",
 );
 
-export interface DeprecableEngineVersion {
-	engineVersion: EngineVersion;
-	isDeprecated: boolean;
-}
-
-type EngineName = "openSearch" | "elasticsearch";
 const constructorRegex =
 	/EngineVersion.(?<engineName>\w+)\('(?<versionName>[\w.-]+)'\)/;
 
 export const getCDKOpenSearchEngineVersions = () => {
-	const runtimes: DeprecableEngineVersion[] = [];
+	const runtimes: DeprecableVersion<EngineVersion>[] = [];
 
 	for (const { fieldName, fieldValue, isDeprecated } of getStaticFieldComments(
 		CDK_LIB_OPENSEARCH_ENGINE_VERSION_PATH.auto,
 	)) {
-		let engineVersion: EngineVersion;
+		let version: EngineVersion;
 		if (fieldName in EngineVersion) {
-			engineVersion = EngineVersion[
+			version = EngineVersion[
 				fieldName as keyof typeof EngineVersion
 			] as EngineVersion;
 		} else {
@@ -35,10 +30,13 @@ export const getCDKOpenSearchEngineVersions = () => {
 			console.warn(
 				`Unknown version: ${fieldName}, replacing with EngineVersion.${engineName}("${versionName}")`,
 			);
-			engineVersion = EngineVersion[engineName as EngineName](versionName);
+			version =
+				EngineVersion[engineName as "openSearch" | "elasticsearch"](
+					versionName,
+				);
 		}
 
-		runtimes.push({ engineVersion, isDeprecated });
+		runtimes.push({ version, isDeprecated });
 	}
 
 	return runtimes;

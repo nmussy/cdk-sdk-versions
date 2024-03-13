@@ -2,46 +2,44 @@ import {
 	OpenSearchClient,
 	paginateListVersions,
 } from "@aws-sdk/client-opensearch";
-import { CONSOLE_SYMBOLS } from "../util";
+import type { EngineVersion } from "aws-cdk-lib/aws-opensearchservice";
+import { CdkSdkVersionRunner } from "../runner";
 import { getCDKOpenSearchEngineVersions } from "../util/provider/opensearch";
 
 const client = new OpenSearchClient();
 
-const getSdkOpenSearchVersions = async () => {
-	const versions: string[] = [];
-
-	const paginator = paginateListVersions({ client, pageSize: 100 }, {});
-
-	for await (const { Versions = [] } of paginator) {
-		versions.push(...Versions);
+export class OpenSearchRunner extends CdkSdkVersionRunner<
+	EngineVersion,
+	string
+> {
+	constructor() {
+		super("OpenSearch");
 	}
 
-	return versions;
-};
+	protected getCdkVersions() {
+		return getCDKOpenSearchEngineVersions();
+	}
+	protected async fetchSdkVersions() {
+		const versions: string[] = [];
 
-const runOpenSearch = async () => {
-	const cdkVersions = getCDKOpenSearchEngineVersions();
-	const sdkVersions = await getSdkOpenSearchVersions();
+		const paginator = paginateListVersions({ client, pageSize: 100 }, {});
 
-	for (const cdkVersion of cdkVersions) {
-		const sdkVersion = sdkVersions.find(
-			(version) => version === cdkVersion.engineVersion.version,
-		);
-
-		if (!sdkVersion) {
-			console.log(CONSOLE_SYMBOLS.DELETE_BOX, cdkVersion.engineVersion.version);
+		for await (const { Versions = [] } of paginator) {
+			versions.push(...Versions);
 		}
+
+		return versions.map((version) => ({ version, isDeprecated: false }));
 	}
 
-	for (const sdkVersion of sdkVersions) {
-		const cdkVersion = cdkVersions.find(
-			({ engineVersion: { version } }) => version === sdkVersion,
-		);
-
-		if (!cdkVersion) {
-			console.log(CONSOLE_SYMBOLS.ADD_BOX, sdkVersion);
-		}
+	protected stringifyCdkVersion({ version }: EngineVersion) {
+		return version;
 	}
-};
 
-if (process.env.NODE_ENV !== "test") void runOpenSearch();
+	protected stringifySdkVersion(version: string) {
+		return version;
+	}
+
+	protected compareCdkSdkVersions(cdk: EngineVersion, sdk: string) {
+		return cdk.version === sdk;
+	}
+}

@@ -3,70 +3,54 @@ import {
 	paginateDescribeRuntimeVersions,
 	type RuntimeVersion,
 } from "@aws-sdk/client-synthetics";
-import { CONSOLE_SYMBOLS } from "../util";
+import type { Runtime } from "aws-cdk-lib/aws-synthetics";
+import { CdkSdkVersionRunner } from "../runner";
 import { getCDKSyntheticsRuntimes } from "../util/provider/synthetics";
 
+const __MISSING_VERSION_NAME__ = "__MISSING_VERSION_NAME__";
+
 const client = new SyntheticsClient({});
-
-export const getRuntimeVersions = async () => {
-	const paginator = paginateDescribeRuntimeVersions(
-		{ client, pageSize: 80 },
-		{},
-	);
-	const versions: RuntimeVersion[] = [];
-	for await (const { RuntimeVersions = [] } of paginator) {
-		versions.push(...RuntimeVersions);
+export class SyntheticsRunner extends CdkSdkVersionRunner<
+	Runtime,
+	RuntimeVersion
+> {
+	constructor() {
+		super("Synthetics");
 	}
-	return versions;
-};
 
-const runSynthetics = async () => {
-	const cdkVersions = getCDKSyntheticsRuntimes();
-	const sdkVersions = await getRuntimeVersions();
+	protected getCdkVersions() {
+		return getCDKSyntheticsRuntimes();
+	}
 
-	for (const cdkVersion of cdkVersions) {
-		const sdkVersion = sdkVersions.find(
-			({ VersionName = "" }) => cdkVersion.runtime.name === VersionName,
+	protected async fetchSdkVersions() {
+		const paginator = paginateDescribeRuntimeVersions(
+			{ client, pageSize: 80 },
+			{},
 		);
-
-		const isSdkDeprecated =
-			sdkVersion?.DeprecationDate && sdkVersion.DeprecationDate < new Date();
-
-		if (!sdkVersion) {
-			console.log(CONSOLE_SYMBOLS.DELETE_BOX, cdkVersion.runtime.name);
-		} else if (!cdkVersion.isDeprecated && isSdkDeprecated) {
-			console.log(
-				CONSOLE_SYMBOLS.UPDATE_BOX,
-				cdkVersion.runtime.name,
-				"@deprecated",
-			);
-		} else if (cdkVersion.isDeprecated && !isSdkDeprecated) {
-			console.log(
-				CONSOLE_SYMBOLS.UPDATE_BOX,
-				cdkVersion.runtime.name,
-				"not @deprecated",
-			);
+		const versions: RuntimeVersion[] = [];
+		for await (const { RuntimeVersions = [] } of paginator) {
+			versions.push(...RuntimeVersions);
 		}
+
+		const now = new Date();
+
+		return versions.map((version) => ({
+			version,
+			isDeprecated: !!(
+				version.DeprecationDate && version.DeprecationDate < now
+			),
+		}));
 	}
 
-	for (const sdkVersion of sdkVersions) {
-		if (!sdkVersion.VersionName) continue;
-
-		const cdkVersion = cdkVersions.find(
-			({ runtime: { name } }) => name === sdkVersion.VersionName,
-		);
-
-		const isSdkDeprecated =
-			sdkVersion?.DeprecationDate && sdkVersion.DeprecationDate < new Date();
-
-		if (!cdkVersion) {
-			console.log(
-				CONSOLE_SYMBOLS.ADD_BOX,
-				sdkVersion.VersionName,
-				isSdkDeprecated ? "@deprecated" : "",
-			);
-		}
+	protected stringifyCdkVersion({ name }: Runtime) {
+		return name;
 	}
-};
 
-if (process.env.NODE_ENV !== "test") void runSynthetics();
+	protected stringifySdkVersion({ VersionName }: RuntimeVersion) {
+		return VersionName ?? __MISSING_VERSION_NAME__;
+	}
+
+	protected compareCdkSdkVersions(cdk: Runtime, sdk: RuntimeVersion) {
+		return cdk.name === sdk.VersionName;
+	}
+}

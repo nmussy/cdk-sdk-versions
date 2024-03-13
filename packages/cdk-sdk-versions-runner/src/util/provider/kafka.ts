@@ -1,4 +1,5 @@
 import { KafkaVersion } from "@aws-cdk/aws-msk-alpha";
+import type { DeprecableVersion } from "../../runner";
 import { CdkModulePath } from "../cdk";
 import { getStaticFieldComments } from "../tsdoc";
 
@@ -6,38 +7,34 @@ export const CDK_MSK_ALPHA_CLUSTER_VERSION_PATH = new CdkModulePath(
 	"@aws-cdk/aws-msk-alpha",
 	"lib/cluster-version.d.ts",
 );
-export interface DeprecableKafkaVersion {
-	kafkaVersion: KafkaVersion;
-	isDeprecated: boolean;
-}
 
-const kafkaConstructorRegex = /KafkaVersion\.of\('(?<version>[\d.]+)'\)/;
+const kafkaConstructorRegex = /KafkaVersion\.of\('(?<versionName>[\d.]+)'\)/;
 
 export const getCDKKafkaVersions = () => {
-	const kafkaVersions: DeprecableKafkaVersion[] = [];
+	const kafkaVersions: DeprecableVersion<KafkaVersion>[] = [];
 
 	for (const { fieldName, fieldValue, isDeprecated } of getStaticFieldComments(
 		CDK_MSK_ALPHA_CLUSTER_VERSION_PATH.auto,
 	)) {
-		let kafkaVersion: KafkaVersion;
+		let version: KafkaVersion;
 		if (fieldName in KafkaVersion) {
-			kafkaVersion = KafkaVersion[
+			version = KafkaVersion[
 				fieldName as keyof typeof KafkaVersion
 			] as KafkaVersion;
 		} else {
 			const match = fieldValue.match(kafkaConstructorRegex);
 			if (!match?.groups) throw new Error(`Unknown version: ${fieldValue}`);
 			const {
-				groups: { version },
+				groups: { versionName },
 			} = match;
 			console.warn(
-				`Unknown version: ${fieldName}, replacing with KafkaVersion.of("${version}")`,
+				`Unknown version: ${fieldName}, replacing with KafkaVersion.of("${versionName}")`,
 			);
-			kafkaVersion = KafkaVersion.of(version);
+			version = KafkaVersion.of(versionName);
 		}
 
 		kafkaVersions.push({
-			kafkaVersion,
+			version,
 			isDeprecated,
 		});
 	}
