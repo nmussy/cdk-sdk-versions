@@ -11,6 +11,10 @@ const registryId = "602401143452";
 
 export const MISSING_IMAGE_TAG = "__MISSING_IMAGE_TAG__";
 
+// Ignore any image tags that don't match the v1.2.3 format
+// e.g. v2.0.0-rc5, v2.4.2-linux_amd64, v2.0.0-test-linux_amd64
+const validImageTagRegex = /^v\d+\.\d+\.\d+$/;
+
 const getAlbControllerVersions = async () => {
 	const versions: string[] = [];
 
@@ -21,7 +25,9 @@ const getAlbControllerVersions = async () => {
 
 	for await (const { imageIds = [] } of paginator) {
 		versions.push(
-			...imageIds.map(({ imageTag = MISSING_IMAGE_TAG }) => imageTag),
+			...imageIds
+				.map(({ imageTag = MISSING_IMAGE_TAG }) => imageTag)
+				.filter((imageTag) => imageTag.match(validImageTagRegex)),
 		);
 	}
 
@@ -43,7 +49,6 @@ const runAlbController = async () => {
 	}
 
 	for (const sdkVersion of sdkVersions) {
-		if (sdkVersion.includes("-test")) continue;
 		const cdkVersion = cdkVersions.find(
 			({ engineVersion: { version } }) => version === sdkVersion,
 		);
