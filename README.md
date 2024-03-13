@@ -24,17 +24,15 @@
   - [`InstanceSize`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ec2.InstanceSize.html)
 - Kafka
   - [`KafkaVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/@aws-cdk_aws-msk-alpha.KafkaVersion.html)
+- Bedrock
+  - [`FoundationModelIdentifier`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_bedrock.FoundationModelIdentifier.html)
+- OpenSearch Service
+  - [`EngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_opensearchservice.EngineVersion.html)
+- EKS
+  - [`AlbControllerVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_eks.AlbControllerVersion.html)
 
 ### Upcoming support
 
-- OpenSearch Service
-  - [`EngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_opensearchservice.EngineVersion.html)
-    - API: https://docs.aws.amazon.com/opensearch-service/latest/APIReference/API_ListVersions.html
-- EKS
-  - [`AlbControllerVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_eks.AlbControllerVersion.html)
-    - `aws ecr list-images --repository-name amazon/aws-load-balancer-controller --registry-id 602401143452`
-- Bedrock
-  - [`FoundationModelIdentifier`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_bedrock.FoundationModelIdentifier.html)
 - EC2
   - Instance properties, see [aws-cdk#12022](https://github.com/aws/aws-cdk/issues/12022)
 
