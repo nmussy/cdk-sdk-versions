@@ -1,8 +1,8 @@
 import {
 	KafkaClient,
 	KafkaVersionStatus,
-	type KafkaVersion as SDKKafkaVersion,
 	paginateListKafkaVersions,
+	type KafkaVersion as SDKKafkaVersion,
 } from "@aws-sdk/client-kafka";
 import { CONSOLE_SYMBOLS } from "../util";
 import { getCDKKafkaVersions } from "../util/provider/kafka";
@@ -31,13 +31,13 @@ const runKafka = async () => {
 		if (!sdkVersion) {
 			if (cdkVersion.isDeprecated) continue;
 
-			console.log(CONSOLE_SYMBOLS.DELETE, cdkVersion.kafkaVersion.version);
+			console.log(CONSOLE_SYMBOLS.DELETE_BOX, cdkVersion.kafkaVersion.version);
 		} else if (
 			!cdkVersion.isDeprecated &&
 			sdkVersion.Status === KafkaVersionStatus.DEPRECATED
 		) {
 			console.log(
-				CONSOLE_SYMBOLS.UPDATE,
+				CONSOLE_SYMBOLS.UPDATE_BOX,
 				cdkVersion.kafkaVersion.version,
 				"@deprecated",
 			);
@@ -46,7 +46,7 @@ const runKafka = async () => {
 			sdkVersion.Status === KafkaVersionStatus.ACTIVE
 		) {
 			console.log(
-				CONSOLE_SYMBOLS.UPDATE,
+				CONSOLE_SYMBOLS.UPDATE_BOX,
 				cdkVersion.kafkaVersion.version,
 				"not @deprecated",
 			);
@@ -62,7 +62,7 @@ const runKafka = async () => {
 
 		if (!cdkVersion) {
 			console.log(
-				CONSOLE_SYMBOLS.ADD,
+				CONSOLE_SYMBOLS.ADD_BOX,
 				sdkVersion.Version,
 				sdkVersion.Status === KafkaVersionStatus.DEPRECATED
 					? "@deprecated"

@@ -2,66 +2,52 @@ import {
 	BedrockClient,
 	FoundationModelLifecycleStatus,
 	ListFoundationModelsCommand,
+	type FoundationModelSummary,
 } from "@aws-sdk/client-bedrock";
-import { CONSOLE_SYMBOLS } from "../util";
+import type { FoundationModelIdentifier } from "aws-cdk-lib/aws-bedrock";
+import { CdkSdkVersionRunner } from "../runner";
 import { getCDKFoundationModelIdentifiers } from "../util/provider/bedrock";
 
 const client = new BedrockClient({});
-export const getFoundationModels = async () => {
-	const models = await client.send(new ListFoundationModelsCommand({}));
 
-	return models.modelSummaries ?? [];
-};
+const __MISSING_MODEL_ID__ = "__MISSING_MODEL_ID__";
 
-export const runBedrock = async () => {
-	const sdkModels = await getFoundationModels();
-	const cdkModels = getCDKFoundationModelIdentifiers();
-
-	for (const cdkModel of cdkModels) {
-		const sdkModel = sdkModels.find(
-			({ modelId }) => modelId === cdkModel.model.modelId,
-		);
-
-		const isDeprecated =
-			sdkModel?.modelLifecycle?.status !==
-			FoundationModelLifecycleStatus.ACTIVE;
-
-		if (!sdkModel) {
-			if (cdkModel.isDeprecated) continue;
-
-			console.log(CONSOLE_SYMBOLS.DELETE, cdkModel.model.modelId);
-		} else if (!cdkModel.isDeprecated && isDeprecated) {
-			console.log(
-				CONSOLE_SYMBOLS.UPDATE,
-				cdkModel.model.modelId,
-				"@deprecated",
-			);
-		} else if (cdkModel.isDeprecated && !isDeprecated) {
-			console.log(
-				CONSOLE_SYMBOLS.UPDATE,
-				cdkModel.model.modelId,
-				"not @deprecated",
-			);
-		}
+export class BedrockRunner extends CdkSdkVersionRunner<
+	FoundationModelIdentifier,
+	FoundationModelSummary
+> {
+	constructor() {
+		super("Bedrock");
 	}
 
-	for (const sdkModel of sdkModels) {
-		const cdkModel = cdkModels.find(
-			({ model: { modelId } }) => modelId === sdkModel.modelId,
+	protected getCdkVersions() {
+		return getCDKFoundationModelIdentifiers();
+	}
+	protected async fetchSdkVersions() {
+		const { modelSummaries = [] } = await client.send(
+			new ListFoundationModelsCommand({}),
 		);
 
-		if (!cdkModel) {
-			const isDeprecated =
-				sdkModel?.modelLifecycle?.status !==
-				FoundationModelLifecycleStatus.ACTIVE;
-
-			console.log(
-				CONSOLE_SYMBOLS.ADD,
-				sdkModel.modelId,
-				isDeprecated ? "@deprecated" : "",
-			);
-		}
+		return modelSummaries.map((version) => ({
+			version,
+			isDeprecated:
+				version.modelLifecycle?.status !==
+				FoundationModelLifecycleStatus.ACTIVE,
+		}));
 	}
-};
 
-if (process.env.NODE_ENV !== "test") void runBedrock();
+	protected stringifyCdkVersion({ modelId }: FoundationModelIdentifier) {
+		return modelId;
+	}
+
+	protected stringifySdkVersion({ modelId }: FoundationModelSummary) {
+		return modelId ?? __MISSING_MODEL_ID__;
+	}
+
+	protected compareCdkSdkVersions(
+		cdk: FoundationModelIdentifier,
+		sdk: FoundationModelSummary,
+	) {
+		return cdk.modelId === sdk.modelId;
+	}
+}

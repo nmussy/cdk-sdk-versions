@@ -44,7 +44,7 @@ const runAlbController = async () => {
 		);
 
 		if (!sdkVersion) {
-			console.log(CONSOLE_SYMBOLS.DELETE, cdkVersion.engineVersion.version);
+			console.log(CONSOLE_SYMBOLS.DELETE_BOX, cdkVersion.engineVersion.version);
 		}
 	}
 
@@ -54,7 +54,7 @@ const runAlbController = async () => {
 		);
 
 		if (!cdkVersion) {
-			console.log(CONSOLE_SYMBOLS.ADD, sdkVersion);
+			console.log(CONSOLE_SYMBOLS.ADD_BOX, sdkVersion);
 		}
 	}
 };

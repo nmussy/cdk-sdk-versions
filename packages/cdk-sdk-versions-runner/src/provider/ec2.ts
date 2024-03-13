@@ -1,9 +1,9 @@
 import {
 	EC2Client,
-	type Image,
-	type InstanceTypeInfo,
 	paginateDescribeImages,
 	paginateDescribeInstanceTypes,
+	type Image,
+	type InstanceTypeInfo,
 } from "@aws-sdk/client-ec2";
 import type { InstanceClass, InstanceSize } from "aws-cdk-lib/aws-ec2";
 import { CONSOLE_SYMBOLS } from "../util";
@@ -110,16 +110,16 @@ const runWindows = async () => {
 		if (!sdkImage) {
 			if (cdkVersion.isDeprecated) continue;
 
-			console.log(CONSOLE_SYMBOLS.DELETE, cdkVersion.windowsVersion);
+			console.log(CONSOLE_SYMBOLS.DELETE_BOX, cdkVersion.windowsVersion);
 		} else if (!cdkVersion.isDeprecated && isSdkVersionDeprecated) {
 			console.log(
-				CONSOLE_SYMBOLS.UPDATE,
+				CONSOLE_SYMBOLS.UPDATE_BOX,
 				cdkVersion.windowsVersion,
 				"@deprecated",
 			);
 		} else if (cdkVersion.isDeprecated && !isSdkVersionDeprecated) {
 			console.log(
-				CONSOLE_SYMBOLS.UPDATE,
+				CONSOLE_SYMBOLS.UPDATE_BOX,
 				cdkVersion.windowsVersion,
 				"not @deprecated",
 			);
@@ -136,7 +136,7 @@ const runWindows = async () => {
 		if (!cdkVersion) {
 			const isSdkVersionDeprecated = sdkImage?.State !== "available";
 			console.log(
-				CONSOLE_SYMBOLS.ADD,
+				CONSOLE_SYMBOLS.ADD_BOX,
 				sdkImage.Name,
 				isSdkVersionDeprecated ? "@deprecated" : "",
 			);
@@ -164,7 +164,7 @@ const runInstanceClasses = async () => {
 		if (InstanceClassIgnoredValues.includes(sdkInstanceClass)) continue;
 
 		if (!cdkInstanceClasses.includes(sdkInstanceClass)) {
-			console.log(CONSOLE_SYMBOLS.ADD, sdkInstanceClass);
+			console.log(CONSOLE_SYMBOLS.ADD_BOX, sdkInstanceClass);
 		}
 	}
 };
@@ -184,7 +184,7 @@ const runInstanceSizes = async () => {
 		// if (InstanceSizeIgnoredValues.includes(sdkInstanceSize)) continue;
 
 		if (!cdkInstanceSizes.includes(sdkInstanceSize)) {
-			console.log(CONSOLE_SYMBOLS.ADD, sdkInstanceSize);
+			console.log(CONSOLE_SYMBOLS.ADD_BOX, sdkInstanceSize);
 		}
 	}
 };

@@ -1,7 +1,7 @@
 import {
-	type RuntimeVersion,
 	SyntheticsClient,
 	paginateDescribeRuntimeVersions,
+	type RuntimeVersion,
 } from "@aws-sdk/client-synthetics";
 import { CONSOLE_SYMBOLS } from "../util";
 import { getCDKSyntheticsRuntimes } from "../util/provider/synthetics";
@@ -33,16 +33,16 @@ const runSynthetics = async () => {
 			sdkVersion?.DeprecationDate && sdkVersion.DeprecationDate < new Date();
 
 		if (!sdkVersion) {
-			console.log(CONSOLE_SYMBOLS.DELETE, cdkVersion.runtime.name);
+			console.log(CONSOLE_SYMBOLS.DELETE_BOX, cdkVersion.runtime.name);
 		} else if (!cdkVersion.isDeprecated && isSdkDeprecated) {
 			console.log(
-				CONSOLE_SYMBOLS.UPDATE,
+				CONSOLE_SYMBOLS.UPDATE_BOX,
 				cdkVersion.runtime.name,
 				"@deprecated",
 			);
 		} else if (cdkVersion.isDeprecated && !isSdkDeprecated) {
 			console.log(
-				CONSOLE_SYMBOLS.UPDATE,
+				CONSOLE_SYMBOLS.UPDATE_BOX,
 				cdkVersion.runtime.name,
 				"not @deprecated",
 			);
@@ -61,7 +61,7 @@ const runSynthetics = async () => {
 
 		if (!cdkVersion) {
 			console.log(
-				CONSOLE_SYMBOLS.ADD,
+				CONSOLE_SYMBOLS.ADD_BOX,
 				sdkVersion.VersionName,
 				isSdkDeprecated ? "@deprecated" : "",
 			);

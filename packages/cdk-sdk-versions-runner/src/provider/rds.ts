@@ -1,7 +1,7 @@
 import {
-	type DBEngineVersion,
 	RDSClient,
 	paginateDescribeDBEngineVersions,
+	type DBEngineVersion,
 } from "@aws-sdk/client-rds";
 import {
 	AuroraMysqlEngineVersion,
@@ -16,10 +16,6 @@ import { uniqBy } from "lodash";
 import { CONSOLE_SYMBOLS } from "../util";
 import {
 	CdkEngineGuard,
-	type CdkEngineVersion,
-	type CdkEngineVersionType,
-	type DeprecableEngineVersion,
-	type EngineKey,
 	OracleEngines,
 	RdsEngine,
 	SqlServerEngines,
@@ -27,6 +23,10 @@ import {
 	getCDKInstanceEngineVersions,
 	getVersionFromCdkEngineVersion,
 	isEngineVersionEqualWith,
+	type CdkEngineVersion,
+	type CdkEngineVersionType,
+	type DeprecableEngineVersion,
+	type EngineKey,
 } from "../util/provider/rds";
 
 const client = new RDSClient({});
@@ -280,20 +280,20 @@ const runSdk = async ({ sdkEngines, cdkEngines, engineKey }: RunProps) => {
 			if (cdkEngine.isDeprecated) continue;
 
 			console.log(
-				CONSOLE_SYMBOLS.DELETE,
+				CONSOLE_SYMBOLS.DELETE_BOX,
 				stringifyEngineVersion(cdkEngine, engineKey),
 			);
 			console.log(getStatic({ ...cdkEngine, isDeprecated: true }, engineKey));
 		} else if (!cdkEngine.isDeprecated && sdkEngine.isDeprecated) {
 			console.log(
-				CONSOLE_SYMBOLS.UPDATE,
+				CONSOLE_SYMBOLS.UPDATE_BOX,
 				stringifyEngineVersion(cdkEngine, engineKey),
 				"@deprecated",
 			);
 			console.log(getStatic(sdkEngine, engineKey));
 		} else if (cdkEngine.isDeprecated && !sdkEngine.isDeprecated) {
 			console.log(
-				CONSOLE_SYMBOLS.UPDATE,
+				CONSOLE_SYMBOLS.UPDATE_BOX,
 				stringifyEngineVersion(cdkEngine, engineKey),
 				"not @deprecated",
 			);
@@ -319,7 +319,7 @@ const runSdk = async ({ sdkEngines, cdkEngines, engineKey }: RunProps) => {
 
 		if (!cdkEngine) {
 			console.log(
-				CONSOLE_SYMBOLS.ADD,
+				CONSOLE_SYMBOLS.ADD_BOX,
 				stringifyEngineVersion(sdkEngine, engineKey),
 				sdkEngine.isDeprecated ? "@deprecated" : "",
 			);

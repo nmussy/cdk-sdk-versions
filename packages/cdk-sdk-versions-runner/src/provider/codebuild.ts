@@ -1,15 +1,15 @@
 import {
 	CodeBuildClient,
-	type EnvironmentLanguage,
 	ListCuratedEnvironmentImagesCommand,
+	type EnvironmentLanguage,
 } from "@aws-sdk/client-codebuild";
 import { Architecture } from "@aws-sdk/client-lambda";
 import { groupBy, mapValues } from "lodash";
 import type { Entries } from "type-fest";
 import { CONSOLE_SYMBOLS } from "../util";
 import {
-	type BuildImageClass,
 	getCDKCodeBuildImages,
+	type BuildImageClass,
 } from "../util/provider/codebuild";
 
 // FIXME remove, use CodeBuild.PlatformType
@@ -127,7 +127,7 @@ const runBuildImages = async () => {
 
 			if (!sdkImage) {
 				console.log(
-					CONSOLE_SYMBOLS.UPDATE,
+					CONSOLE_SYMBOLS.UPDATE_BOX,
 					`${imageClassName}.${cdkImage.image.imageId}`,
 					"@deprecated",
 				);
@@ -140,7 +140,7 @@ const runBuildImages = async () => {
 			);
 
 			if (!cdkImage) {
-				console.log(CONSOLE_SYMBOLS.ADD, `${imageClassName}.${sdkImage}`);
+				console.log(CONSOLE_SYMBOLS.ADD_BOX, `${imageClassName}.${sdkImage}`);
 			}
 		}
 	}
