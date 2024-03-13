@@ -11,7 +11,7 @@ export interface DeprecableFoundationModelIdentifier {
 }
 
 const bedrockConstructorRegex =
-	/new FoundationModelIdentifier\('(?<modelId>[\w.-]+)'\)/;
+	/new FoundationModelIdentifier\('(?<modelId>[\w.:-]+)'\)/;
 
 export const getCDKFoundationModelIdentifiers = () => {
 	const bedrockModels: DeprecableFoundationModelIdentifier[] = [];
