@@ -1,11 +1,11 @@
 import {
 	EC2Client,
-	Image,
-	InstanceTypeInfo,
+	type Image,
+	type InstanceTypeInfo,
 	paginateDescribeImages,
 	paginateDescribeInstanceTypes,
 } from "@aws-sdk/client-ec2";
-import { InstanceClass, InstanceSize } from "aws-cdk-lib/aws-ec2";
+import type { InstanceClass, InstanceSize } from "aws-cdk-lib/aws-ec2";
 import { CONSOLE_SYMBOLS } from "../util";
 import {
 	InstanceClassIgnoredValues,
