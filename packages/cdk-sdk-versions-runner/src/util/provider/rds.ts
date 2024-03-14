@@ -31,19 +31,24 @@ export enum RdsEngine {
 	SQLSERVER_WEB = "sqlserver-web",
 }
 
-export const OracleEngines = [
+export const OracleEngines: RdsEngine[] = [
 	RdsEngine.ORACLE_SE2,
 	RdsEngine.ORACLE_SE2_CDB,
 	RdsEngine.ORACLE_EE,
 	RdsEngine.ORACLE_EE_CDB,
-] as const;
+];
 
-export const SqlServerEngines = [
+export const SqlServerEngines: RdsEngine[] = [
 	RdsEngine.SQLSERVER_SE,
 	RdsEngine.SQLSERVER_EX,
 	RdsEngine.SQLSERVER_WEB,
 	RdsEngine.SQLSERVER_EE,
-] as const;
+];
+
+export const AuroraEngines: RdsEngine[] = [
+	RdsEngine.AURORA_MYSQL,
+	RdsEngine.AURORA_POSTGRESQL,
+];
 
 export type CdkEngineVersionType =
 	| typeof OracleEngineVersion
@@ -223,8 +228,10 @@ const getVersion = <T extends CdkEngineVersionType = CdkEngineVersion>(
 	return engineVersionEnum.of(fullVersion, majorVersion) as unknown as T;
 };
 
-function _getCDKVersions(filename: string) {
-	const engineVersions: DeprecableEngineVersion[] = [];
+function _getCDKVersions<T extends CdkEngineVersion = CdkEngineVersion>(
+	filename: string,
+) {
+	const engineVersions: DeprecableEngineVersion<T>[] = [];
 
 	for (const { className, fieldName, isDeprecated } of getStaticFieldComments(
 		filename,
@@ -238,7 +245,7 @@ function _getCDKVersions(filename: string) {
 		)
 			continue;
 
-		let version: CdkEngineVersion | undefined;
+		let version: T;
 		switch (className) {
 			// Instance
 			case "MysqlEngineVersion":
@@ -246,35 +253,35 @@ function _getCDKVersions(filename: string) {
 					className,
 					fieldName as keyof typeof MysqlEngineVersion,
 					MysqlEngineVersion,
-				);
+				) as T;
 				break;
 			case "OracleEngineVersion":
 				version = getVersion(
 					className,
 					fieldName as keyof typeof OracleEngineVersion,
 					OracleEngineVersion,
-				);
+				) as T;
 				break;
 			case "MariaDbEngineVersion":
 				version = getVersion(
 					className,
 					fieldName as keyof typeof MariaDbEngineVersion,
 					MariaDbEngineVersion,
-				);
+				) as T;
 				break;
 			case "PostgresEngineVersion":
 				version = getVersion(
 					className,
 					fieldName as keyof typeof PostgresEngineVersion,
 					PostgresEngineVersion,
-				);
+				) as T;
 				break;
 			case "SqlServerEngineVersion":
 				version = getVersion(
 					className,
 					fieldName as keyof typeof SqlServerEngineVersion,
 					SqlServerEngineVersion,
-				);
+				) as T;
 				break;
 
 			// Cluster
@@ -283,14 +290,14 @@ function _getCDKVersions(filename: string) {
 					className,
 					fieldName as keyof typeof AuroraMysqlEngineVersion,
 					AuroraMysqlEngineVersion,
-				);
+				) as T;
 				break;
 			case "AuroraPostgresEngineVersion":
 				version = getVersion(
 					className,
 					fieldName as keyof typeof AuroraPostgresEngineVersion,
 					AuroraPostgresEngineVersion,
-				);
+				) as T;
 				break;
 			// Deprecated
 			case "OracleLegacyEngineVersion":
@@ -299,21 +306,16 @@ function _getCDKVersions(filename: string) {
 				throw new Error(`Unknown class name: ${className}`);
 		}
 
-		if (!version) {
-			throw new Error(`Unknown engine version: ${className}.${fieldName}`);
-		}
-
-		engineVersions.push({
-			version,
-			isDeprecated,
-		});
+		engineVersions.push({ version, isDeprecated });
 	}
 
 	return engineVersions;
 }
 
-export const getCDKInstanceEngineVersions = () =>
-	_getCDKVersions(CDK_LIB_INSTANCE_ENGINE_PATH.auto);
+export const getCDKInstanceEngineVersions = <
+	T extends CdkEngineVersion = CdkEngineVersion,
+>() => _getCDKVersions<T>(CDK_LIB_INSTANCE_ENGINE_PATH.auto);
 
-export const getCDKClusterEngineVersions = () =>
-	_getCDKVersions(CDK_LIB_CLUSTER_ENGINE_PATH.auto);
+export const getCDKClusterEngineVersions = <
+	T extends CdkEngineVersion = CdkEngineVersion,
+>() => _getCDKVersions<T>(CDK_LIB_CLUSTER_ENGINE_PATH.auto);

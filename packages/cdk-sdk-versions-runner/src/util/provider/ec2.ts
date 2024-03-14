@@ -27,10 +27,7 @@ export const getCDKWindowsVersions = () => {
 			version = memberValue as WindowsVersion;
 		}
 
-		windowsVersions.push({
-			version,
-			isDeprecated,
-		});
+		windowsVersions.push({ version, isDeprecated });
 	}
 
 	return windowsVersions;

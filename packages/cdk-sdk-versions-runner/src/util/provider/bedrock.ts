@@ -33,10 +33,7 @@ export const getCDKFoundationModelIdentifiers = () => {
 			version = new FoundationModelIdentifier(modelId);
 		}
 
-		bedrockModels.push({
-			version,
-			isDeprecated,
-		});
+		bedrockModels.push({ version, isDeprecated });
 	}
 
 	return bedrockModels;

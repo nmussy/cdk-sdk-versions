@@ -33,10 +33,7 @@ export const getCDKKafkaVersions = () => {
 			version = KafkaVersion.of(versionName);
 		}
 
-		kafkaVersions.push({
-			version,
-			isDeprecated,
-		});
+		kafkaVersions.push({ version, isDeprecated });
 	}
 
 	return kafkaVersions;
