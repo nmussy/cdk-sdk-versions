@@ -8,6 +8,7 @@ import {
 	SqlServerEngineVersion,
 } from "aws-cdk-lib/aws-rds";
 import { isEqualWith } from "lodash";
+import type { DeprecableVersion } from "../../runner";
 import { CdkLibPath } from "../cdk";
 import { getStaticFieldComments } from "../tsdoc";
 
@@ -170,12 +171,9 @@ export const CDK_LIB_CLUSTER_ENGINE_PATH = new CdkLibPath(
 	"aws-rds/lib/cluster-engine.d.ts",
 );
 
-export interface DeprecableEngineVersion<
+export type DeprecableEngineVersion<
 	T extends CdkEngineVersion = CdkEngineVersion,
-> {
-	engineVersion: T;
-	isDeprecated: boolean;
-}
+> = DeprecableVersion<T>;
 
 const getVersion = <T extends CdkEngineVersionType = CdkEngineVersion>(
 	className: EngineKey,
@@ -240,39 +238,39 @@ function _getCDKVersions(filename: string) {
 		)
 			continue;
 
-		let engineVersion: CdkEngineVersion | undefined;
+		let version: CdkEngineVersion | undefined;
 		switch (className) {
 			// Instance
 			case "MysqlEngineVersion":
-				engineVersion = getVersion(
+				version = getVersion(
 					className,
 					fieldName as keyof typeof MysqlEngineVersion,
 					MysqlEngineVersion,
 				);
 				break;
 			case "OracleEngineVersion":
-				engineVersion = getVersion(
+				version = getVersion(
 					className,
 					fieldName as keyof typeof OracleEngineVersion,
 					OracleEngineVersion,
 				);
 				break;
 			case "MariaDbEngineVersion":
-				engineVersion = getVersion(
+				version = getVersion(
 					className,
 					fieldName as keyof typeof MariaDbEngineVersion,
 					MariaDbEngineVersion,
 				);
 				break;
 			case "PostgresEngineVersion":
-				engineVersion = getVersion(
+				version = getVersion(
 					className,
 					fieldName as keyof typeof PostgresEngineVersion,
 					PostgresEngineVersion,
 				);
 				break;
 			case "SqlServerEngineVersion":
-				engineVersion = getVersion(
+				version = getVersion(
 					className,
 					fieldName as keyof typeof SqlServerEngineVersion,
 					SqlServerEngineVersion,
@@ -281,14 +279,14 @@ function _getCDKVersions(filename: string) {
 
 			// Cluster
 			case "AuroraMysqlEngineVersion":
-				engineVersion = getVersion(
+				version = getVersion(
 					className,
 					fieldName as keyof typeof AuroraMysqlEngineVersion,
 					AuroraMysqlEngineVersion,
 				);
 				break;
 			case "AuroraPostgresEngineVersion":
-				engineVersion = getVersion(
+				version = getVersion(
 					className,
 					fieldName as keyof typeof AuroraPostgresEngineVersion,
 					AuroraPostgresEngineVersion,
@@ -301,12 +299,12 @@ function _getCDKVersions(filename: string) {
 				throw new Error(`Unknown class name: ${className}`);
 		}
 
-		if (!engineVersion) {
+		if (!version) {
 			throw new Error(`Unknown engine version: ${className}.${fieldName}`);
 		}
 
 		engineVersions.push({
-			engineVersion,
+			version,
 			isDeprecated,
 		});
 	}

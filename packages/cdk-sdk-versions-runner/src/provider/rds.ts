@@ -6,6 +6,7 @@ import {
 import {
 	AuroraMysqlEngineVersion,
 	AuroraPostgresEngineVersion,
+	EngineVersion,
 	MariaDbEngineVersion,
 	MysqlEngineVersion,
 	OracleEngineVersion,
@@ -13,6 +14,7 @@ import {
 	SqlServerEngineVersion,
 } from "aws-cdk-lib/aws-rds";
 import { uniqBy } from "lodash";
+import { CdkSdkVersionRunner } from "../runner";
 import { CONSOLE_SYMBOLS } from "../util";
 import {
 	CdkEngineGuard,
@@ -30,6 +32,67 @@ import {
 } from "../util/provider/rds";
 
 const client = new RDSClient({});
+
+class RdsEngineRunner<
+	EngineVersion extends CdkEngineVersion,
+> extends CdkSdkVersionRunner<EngineVersion, EngineVersion> {
+	constructor(
+		protected readonly engineKey: EngineKey,
+		protected readonly engineVesionType: CdkEngineVersionType,
+	) {
+		super(`Rds${engineKey}`);
+	}
+
+	private static fetchSdkEngineVersionPromiseMap: Partial<
+		Record<EngineKey, Promise<DeprecableEngineVersion<CdkEngineVersion>[]>>
+	> = {};
+	private async fetchSdkEngineVersion<EngineVersion extends CdkEngineVersion>(
+		engine: EngineKey,
+		engiveVersionType: CdkEngineVersionType,
+	): Promise<DeprecableEngineVersion<EngineVersion>[]> {
+		const versions: DBEngineVersion[] = [];
+		const paginator = paginateDescribeDBEngineVersions(
+			{ client, pageSize: 100 },
+			{
+				Engine: engine,
+				IncludeAll: true,
+			},
+		);
+
+		for await (const { DBEngineVersions = [] } of paginator) {
+			versions.push(...DBEngineVersions);
+		}
+
+		return versions.map(
+			({
+				EngineVersion = MISSING_ENGINE_VERSION,
+				MajorEngineVersion = MISSING_MAJOR_ENGINE_VERSION,
+				Status,
+			}) => ({
+				version: engiveVersionType.of(
+					EngineVersion,
+					MajorEngineVersion,
+				) as EngineVersion,
+				isDeprecated: Status !== "available",
+			}),
+		);
+	}
+
+	protected async fetchSdkVersions() {
+		if (!RdsEngineRunner.fetchSdkEngineVersionPromiseMap[this.engineKey]) {
+			RdsEngineRunner.fetchSdkEngineVersionPromiseMap[this.engineKey] =
+				this.fetchSdkEngineVersion<EngineVersion>(
+					this.engineKey,
+					this.engineVesionType,
+				);
+		}
+
+		return ((await RdsEngineRunner.fetchSdkEngineVersionPromiseMap[
+			this.engineKey
+		]) ?? []) as DeprecableEngineVersion<EngineVersion>[];
+	}
+}
+
 export const getSdkRdsEngineVersions = async (engine: RdsEngine) => {
 	const versions: DBEngineVersion[] = [];
 	const paginator = paginateDescribeDBEngineVersions(
@@ -62,10 +125,7 @@ const _getSdkEngineVersions = async <
 			MajorEngineVersion = MISSING_MAJOR_ENGINE_VERSION,
 			Status,
 		}) => ({
-			engineVersion: cdkEngine.of(
-				EngineVersion,
-				MajorEngineVersion,
-			) as unknown as T,
+			version: cdkEngine.of(EngineVersion, MajorEngineVersion) as unknown as T,
 			isDeprecated: Status !== "available",
 		}),
 	);
@@ -112,8 +172,7 @@ export const getSdkSqlServerEngineVersions = async (
 				),
 			)
 		).flat(),
-		({ engineVersion }) =>
-			getVersionFromCdkEngineVersion(engineVersion).fullVersion,
+		({ version }) => getVersionFromCdkEngineVersion(version).fullVersion,
 	);
 
 interface RunProps {
@@ -123,10 +182,10 @@ interface RunProps {
 }
 
 const stringifyEngineVersion = (
-	{ engineVersion }: DeprecableEngineVersion,
+	{ version }: DeprecableEngineVersion,
 	engineKey: EngineKey,
 ) =>
-	`${engineKey}.${getVersionFromCdkEngineVersion(engineVersion)
+	`${engineKey}.${getVersionFromCdkEngineVersion(version)
 		.fullVersion.toLocaleUpperCase()
 		.replace(/\./g, "_")}`;
 
@@ -142,10 +201,10 @@ const humanName: Record<EngineKey, string> = {
 };
 
 const _getStaticComment = (
-	{ engineVersion, isDeprecated }: DeprecableEngineVersion,
+	{ version, isDeprecated }: DeprecableEngineVersion,
 	engineKey: EngineKey,
 ) => {
-	const { fullVersion } = getVersionFromCdkEngineVersion(engineVersion);
+	const { fullVersion } = getVersionFromCdkEngineVersion(version);
 
 	return (
 		isDeprecated
@@ -184,14 +243,13 @@ const getPostgresStaticFeatures = (engineVersion: CdkEngineVersion) => {
 };
 
 const _getStaticInstance = (
-	{ engineVersion, isDeprecated }: DeprecableEngineVersion,
+	{ version, isDeprecated }: DeprecableEngineVersion,
 	engineKey: EngineKey,
 ) => {
-	const { fullVersion, majorVersion } =
-		getVersionFromCdkEngineVersion(engineVersion);
+	const { fullVersion, majorVersion } = getVersionFromCdkEngineVersion(version);
 
 	return /* ts */ `
-  ${_getStaticComment({ engineVersion, isDeprecated }, engineKey)}
+  ${_getStaticComment({ version, isDeprecated }, engineKey)}
   public static readonly VER_${fullVersion
 		.toLocaleUpperCase()
 		.replace(/\.|-/g, "_")
@@ -203,14 +261,14 @@ const _getStaticInstance = (
 };
 
 const getAuroraMysqlStatic = (
-	{ engineVersion, isDeprecated }: DeprecableEngineVersion,
+	{ version, isDeprecated }: DeprecableEngineVersion,
 	engineKey: EngineKey,
 ) => {
-	const { fullVersion } = getVersionFromCdkEngineVersion(engineVersion);
+	const { fullVersion } = getVersionFromCdkEngineVersion(version);
 	const parts = fullVersion.split(".");
 
 	return /* ts */ `
-  ${_getStaticComment({ engineVersion, isDeprecated }, engineKey)}
+  ${_getStaticComment({ version, isDeprecated }, engineKey)}
    public static readonly VER_${parts
 			.slice(-3)
 			.join("_")} = ${engineKey}.builtIn_${parts[0]}_${parts[1]}('${parts
@@ -220,19 +278,18 @@ const getAuroraMysqlStatic = (
 };
 
 const getPostgresStatic = (
-	{ engineVersion, isDeprecated }: DeprecableEngineVersion,
+	{ version, isDeprecated }: DeprecableEngineVersion,
 	engineKey: EngineKey,
 ) => {
-	const { fullVersion, majorVersion } =
-		getVersionFromCdkEngineVersion(engineVersion);
+	const { fullVersion, majorVersion } = getVersionFromCdkEngineVersion(version);
 
 	return /* ts */ `
-  ${_getStaticComment({ engineVersion, isDeprecated }, engineKey)}
+  ${_getStaticComment({ version, isDeprecated }, engineKey)}
   public static readonly VER_${fullVersion.replace(
 		/\./g,
 		"_",
 	)} = ${engineKey}.of('${fullVersion}', '${majorVersion}'${getPostgresStaticFeatures(
-		engineVersion,
+		version,
 	)});
 `;
 };
@@ -265,16 +322,15 @@ const runSdk = async ({ sdkEngines, cdkEngines, engineKey }: RunProps) => {
 	const guard = CdkEngineGuard[engineKey];
 
 	for (const cdkEngine of cdkEngines) {
-		if (!guard(cdkEngine.engineVersion)) continue;
+		if (!guard(cdkEngine.version)) continue;
 
 		const sdkEngine = sdkEngines.find(
-			({ engineVersion }) =>
-				guard(engineVersion) &&
-				isEngineVersionEqualWith(engineVersion, cdkEngine.engineVersion),
+			({ version }) =>
+				guard(version) && isEngineVersionEqualWith(version, cdkEngine.version),
 		);
 
 		if (!sdkEngine) {
-			const version = getVersionFromCdkEngineVersion(cdkEngine.engineVersion);
+			const version = getVersionFromCdkEngineVersion(cdkEngine.version);
 			if (version.fullVersion === version.majorVersion) continue;
 
 			if (cdkEngine.isDeprecated) continue;
@@ -302,19 +358,18 @@ const runSdk = async ({ sdkEngines, cdkEngines, engineKey }: RunProps) => {
 	}
 
 	for (const sdkEngine of sdkEngines) {
-		if (!guard(sdkEngine.engineVersion)) continue;
+		if (!guard(sdkEngine.version)) continue;
 		if (
 			engineKey === "PostgresEngineVersion" &&
-			(sdkEngine.engineVersion as PostgresEngineVersion).postgresFullVersion
+			(sdkEngine.version as PostgresEngineVersion).postgresFullVersion
 				// PSQL 9.4 was never added to the CDK, as they were deprecated from the start
 				.startsWith("9.4.")
 		)
 			continue;
 
 		const cdkEngine = cdkEngines.find(
-			({ engineVersion }) =>
-				guard(engineVersion) &&
-				isEngineVersionEqualWith(engineVersion, sdkEngine.engineVersion),
+			({ version }) =>
+				guard(version) && isEngineVersionEqualWith(version, sdkEngine.version),
 		);
 
 		if (!cdkEngine) {
@@ -378,5 +433,5 @@ export const runClusterEngine = async () => {
 	});
 };
 
-if (process.env.NODE_ENV !== "test") void runInstanceEngine();
+// if (process.env.NODE_ENV !== "test") void runInstanceEngine();
 // if (process.env.NODE_ENV !== "test") void runClusterEngine();
