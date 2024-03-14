@@ -16,7 +16,7 @@ export class OpenSearchRunner extends CdkSdkVersionRunner<
 		super("OpenSearch");
 	}
 
-	protected getCdkVersions() {
+	protected async generateCdkVersions() {
 		return getCDKOpenSearchEngineVersions();
 	}
 	protected async fetchSdkVersions() {
@@ -31,15 +31,11 @@ export class OpenSearchRunner extends CdkSdkVersionRunner<
 		return versions.map((version) => ({ version, isDeprecated: false }));
 	}
 
-	protected stringifyCdkVersion({ version }: EngineVersion) {
+	protected getCdkVersionId({ version }: EngineVersion) {
 		return version;
 	}
 
-	protected stringifySdkVersion(version: string) {
+	protected getSdkVersionId(version: string) {
 		return version;
-	}
-
-	protected compareCdkSdkVersions(cdk: EngineVersion, sdk: string) {
-		return cdk.version === sdk;
 	}
 }

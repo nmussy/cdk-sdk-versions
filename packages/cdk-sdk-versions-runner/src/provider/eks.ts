@@ -24,7 +24,7 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 		super("EksAlbController");
 	}
 
-	protected getCdkVersions() {
+	protected async generateCdkVersions() {
 		return getCDKEKSAlbControllerVersions();
 	}
 	protected async fetchSdkVersions() {
@@ -46,16 +46,12 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 		return versions.map((version) => ({ version, isDeprecated: false }));
 	}
 
-	protected stringifyCdkVersion({ version }: AlbControllerVersion) {
+	protected getCdkVersionId({ version }: AlbControllerVersion) {
 		return version;
 	}
 
-	protected stringifySdkVersion(version: string) {
+	protected getSdkVersionId(version: string) {
 		return version;
-	}
-
-	protected compareCdkSdkVersions(cdk: AlbControllerVersion, sdk: string) {
-		return cdk.version === sdk;
 	}
 }
 

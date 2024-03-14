@@ -1,15 +1,16 @@
-import { join } from "node:path";
 import {
-	type IBuildImage,
 	LinuxArmBuildImage,
 	LinuxArmLambdaBuildImage,
 	LinuxBuildImage,
 	LinuxLambdaBuildImage,
 	WindowsBuildImage,
+	type IBuildImage,
 } from "aws-cdk-lib/aws-codebuild";
+import { join } from "node:path";
 import type { Entries } from "type-fest";
+import type { DeprecableVersion } from "../../runner";
 import { CdkLibPath, type CdkPath } from "../cdk";
-import { type IStaticField, getStaticFieldComments } from "../tsdoc";
+import { getStaticFieldComments, type IStaticField } from "../tsdoc";
 
 const basePath = "aws-codebuild/lib";
 
@@ -60,10 +61,6 @@ const imageBuildPath: { [image in BuildImageClass]: CdkPath } = {
 	LinuxArmLambdaBuildImage: CDK_LIB_CODEBUILD_LAMBDA_ARM_PATH,
 };
 
-export interface DeprecableImage {
-	image: IBuildImage;
-	isDeprecated: boolean;
-}
 
 const imageConstructorRegex =
 	/\w+.fromCodeBuildImageId\('(?<imageId>[\w.-]+)'\)/;
@@ -71,7 +68,7 @@ const imageConstructorRegex =
 const imageFromConstructorRegex = /^\s*imageId: '(?<imageId>[\w\/.:-]+)'/m;
 
 export const getCDKCodeBuildImages = () => {
-	const images: { [image in BuildImageClass]: DeprecableImage[] } = {
+	const images: { [image in BuildImageClass]: DeprecableVersion<IBuildImage>[] } = {
 		WindowsBuildImage: [],
 		LinuxBuildImage: [],
 		LinuxArmBuildImage: [],
@@ -98,9 +95,9 @@ export const getCDKCodeBuildImages = () => {
 
 			const imageClass = getBuildClass(imageClassName);
 
-			let image: IBuildImage;
+			let version: IBuildImage;
 			if (fieldName in imageClass) {
-				image = imageClass[fieldName as keyof typeof imageClass];
+				version = imageClass[fieldName as keyof typeof imageClass];
 			} else {
 				const match =
 					fieldValue.match(imageConstructorRegex) ??
@@ -116,10 +113,10 @@ export const getCDKCodeBuildImages = () => {
 
 				// FIXME cannot use .fromCodeBuildImageId(), missing from WindowsBuildImage
 				// @ts-ignore private constructor
-				image = new imageClass(imageId);
+				version = new imageClass(imageId);
 			}
 
-			images[imageClassName].push({ image, isDeprecated });
+			images[imageClassName].push({ version, isDeprecated });
 		}
 	}
 

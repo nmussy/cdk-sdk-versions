@@ -1,4 +1,4 @@
-import type { Entries, RequireAtLeastOne } from "type-fest";
+import type { Entries, RequireExactlyOne } from "type-fest";
 import { CONSOLE_SYMBOLS } from "./util";
 
 export interface DeprecableVersion<T> {
@@ -52,33 +52,35 @@ const generateEmptyRunnerResults = <TCdk, TSdk>(): RunnerResults<
 export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 	protected constructor(protected readonly identifier: string) {}
 
-	protected abstract getCdkVersions(): DeprecableVersion<TCdk>[];
+	protected abstract generateCdkVersions(): Promise<DeprecableVersion<TCdk>[]>;
 	protected abstract fetchSdkVersions(): Promise<DeprecableVersion<TSdk>[]>;
 
-	protected abstract stringifyCdkVersion(cdkVersion: TCdk): string;
-	protected abstract stringifySdkVersion(sdkVersion: TSdk): string;
+	protected abstract getCdkVersionId(cdkVersion: TCdk): string;
+	protected abstract getSdkVersionId(sdkVersion: TSdk): string;
 
-	protected abstract compareCdkSdkVersions(cdk: TCdk, sdk: TSdk): boolean;
+	protected compareCdkSdkVersions(cdk: TCdk, sdk: TSdk): boolean {
+		return this.getCdkVersionId(cdk) === this.getSdkVersionId(sdk);
+	}
 
 	protected generateRecord({
 		cdkVersion,
 		sdkVersion,
-	}: RequireAtLeastOne<{ cdkVersion: TCdk; sdkVersion: TSdk }>): RunnerResult<
-		TCdk,
-		TSdk
-	> {
+	}: RequireExactlyOne<
+		{ cdkVersion: TCdk; sdkVersion: TSdk },
+		"cdkVersion" | "sdkVersion"
+	>): RunnerResult<TCdk, TSdk> {
 		if (sdkVersion)
-			return { sdkVersion, result: this.stringifySdkVersion(sdkVersion) };
+			return { sdkVersion, result: this.getSdkVersionId(sdkVersion) };
 		if (cdkVersion)
-			return { cdkVersion, result: this.stringifyCdkVersion(cdkVersion) };
+			return { cdkVersion, result: this.getCdkVersionId(cdkVersion) };
 		throw new Error("never");
 	}
 
 	public async run(): Promise<RunnerResults<TCdk, TSdk>> {
-		// Allows to let the SDK request to be sent while we do CPU intensive TS parsing
-		const _sdkVersionsPromise = this.fetchSdkVersions();
-		const cdkVersions = this.getCdkVersions();
-		const sdkVersions = await _sdkVersionsPromise;
+		const [cdkVersions, sdkVersions] = await Promise.all([
+			this.generateCdkVersions(),
+			this.fetchSdkVersions(),
+		]);
 
 		const runnerResults = generateEmptyRunnerResults<TCdk, TSdk>();
 

@@ -18,7 +18,7 @@ export class SyntheticsRunner extends CdkSdkVersionRunner<
 		super("Synthetics");
 	}
 
-	protected getCdkVersions() {
+	protected async generateCdkVersions() {
 		return getCDKSyntheticsRuntimes();
 	}
 
@@ -42,15 +42,11 @@ export class SyntheticsRunner extends CdkSdkVersionRunner<
 		}));
 	}
 
-	protected stringifyCdkVersion({ name }: Runtime) {
+	protected getCdkVersionId({ name }: Runtime) {
 		return name;
 	}
 
-	protected stringifySdkVersion({ VersionName }: RuntimeVersion) {
+	protected getSdkVersionId({ VersionName }: RuntimeVersion) {
 		return VersionName ?? __MISSING_VERSION_NAME__;
-	}
-
-	protected compareCdkSdkVersions(cdk: Runtime, sdk: RuntimeVersion) {
-		return cdk.name === sdk.VersionName;
 	}
 }

@@ -20,9 +20,10 @@ export class BedrockRunner extends CdkSdkVersionRunner<
 		super("Bedrock");
 	}
 
-	protected getCdkVersions() {
+	protected async generateCdkVersions() {
 		return getCDKFoundationModelIdentifiers();
 	}
+
 	protected async fetchSdkVersions() {
 		const { modelSummaries = [] } = await client.send(
 			new ListFoundationModelsCommand({}),
@@ -36,18 +37,11 @@ export class BedrockRunner extends CdkSdkVersionRunner<
 		}));
 	}
 
-	protected stringifyCdkVersion({ modelId }: FoundationModelIdentifier) {
+	protected getCdkVersionId({ modelId }: FoundationModelIdentifier) {
 		return modelId;
 	}
 
-	protected stringifySdkVersion({ modelId }: FoundationModelSummary) {
+	protected getSdkVersionId({ modelId }: FoundationModelSummary) {
 		return modelId ?? __MISSING_MODEL_ID__;
-	}
-
-	protected compareCdkSdkVersions(
-		cdk: FoundationModelIdentifier,
-		sdk: FoundationModelSummary,
-	) {
-		return cdk.modelId === sdk.modelId;
 	}
 }

@@ -20,7 +20,7 @@ export class KafkaRunner extends CdkSdkVersionRunner<
 		super("Kafka");
 	}
 
-	protected getCdkVersions() {
+	protected async generateCdkVersions() {
 		return getCDKKafkaVersions();
 	}
 	protected async fetchSdkVersions() {
@@ -36,15 +36,11 @@ export class KafkaRunner extends CdkSdkVersionRunner<
 		}));
 	}
 
-	protected stringifyCdkVersion({ version }: CDKKafkaVersion) {
+	protected getCdkVersionId({ version }: CDKKafkaVersion) {
 		return version;
 	}
 
-	protected stringifySdkVersion({ Version }: SDKKafkaVersion) {
+	protected getSdkVersionId({ Version }: SDKKafkaVersion) {
 		return Version ?? __MISSING_VERSION__;
-	}
-
-	protected compareCdkSdkVersions(cdk: CDKKafkaVersion, sdk: SDKKafkaVersion) {
-		return cdk.version === sdk.Version;
 	}
 }
