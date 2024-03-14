@@ -10,10 +10,9 @@ import type {
 	InstanceSize,
 	WindowsVersion,
 } from "aws-cdk-lib/aws-ec2";
-import { CdkSdkVersionRunner } from "../runner";
-import { CONSOLE_SYMBOLS } from "../util";
+import { capitalize } from "lodash";
+import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
 import {
-	InstanceClassIgnoredValues,
 	getCDKInstanceClasses,
 	getCDKInstanceSizes,
 	getCDKWindowsVersions,
@@ -73,105 +72,91 @@ export class Ec2WindowsImagesRunner extends CdkSdkVersionRunner<
 		windowsVersion.toLocaleUpperCase().replace(/[-.]/g, "_");
 }
 
-class Ec2InstanceTypeRunner extends CdkSdkVersionRunner<
-	InstanceClass | InstanceSize,
-	InstanceTypeInfo
-> {}
+class Ec2InstanceTypeRunner<
+	InstanceType extends InstanceClass | InstanceSize,
+> extends CdkSdkVersionRunner<InstanceType, InstanceType> {
+	constructor(private readonly type: "instanceClass" | "instanceSize") {
+		super(`Ec2${capitalize(type)}`);
+	}
 
-export const getInstanceComponentsFromTypeInfo = ({
-	InstanceType,
-}: InstanceTypeInfo) => {
-	const components = (InstanceType ?? "").split(".");
-	if (components.length !== 2) {
-		throw new Error(
-			`Cannot parse instance class and size for type ${InstanceType}`,
+	protected static fetchInstanceTypeInfoPromise: Promise<InstanceTypeInfo[]>;
+	private async fetchInstanceTypeInfo() {
+		const instanceTypes: InstanceTypeInfo[] = [];
+		const paginator = paginateDescribeInstanceTypes(
+			{ client, pageSize: 100 },
+			{},
 		);
-	}
-
-	const [instanceClass, instanceSize] = components;
-
-	return { instanceClass, instanceSize };
-};
-
-export const getInstanceTypeInfo = async () => {
-	const instanceTypes: InstanceTypeInfo[] = [];
-	const paginator = paginateDescribeInstanceTypes(
-		{ client, pageSize: 100 },
-		{},
-	);
-	for await (const { InstanceTypes = [] } of paginator) {
-		instanceTypes.push(...InstanceTypes);
-	}
-
-	return instanceTypes;
-};
-
-export const getInstanceClasses = (instanceTypes: InstanceTypeInfo[]) => {
-	const instanceClasses = new Set<InstanceClass>();
-	for (const instanceType of instanceTypes) {
-		instanceClasses.add(
-			getInstanceComponentsFromTypeInfo(instanceType)
-				.instanceClass as InstanceClass,
-		);
-	}
-
-	return Array.from(instanceClasses);
-};
-
-export const getInstanceSizes = (instanceTypes: InstanceTypeInfo[]) => {
-	const instanceSizes = new Set<InstanceSize>();
-	for (const instanceType of instanceTypes) {
-		instanceSizes.add(
-			getInstanceComponentsFromTypeInfo(instanceType)
-				.instanceSize as InstanceSize,
-		);
-	}
-
-	return Array.from(instanceSizes);
-};
-
-const runInstanceClasses = async () => {
-	const sdkInstanceClasses = getInstanceClasses(await getInstanceTypeInfo());
-	const cdkInstanceClasses = getCDKInstanceClasses();
-
-	for (const cdkInstanceClass of cdkInstanceClasses) {
-		// Instance classes do not get deprecated, they should never "disappear"
-		// If a class is missing, it's likely it needs to be added to
-		// InstanceClassSymbolicValues or InstanceClassIgnoredValues
-		if (!sdkInstanceClasses.includes(cdkInstanceClass)) {
-			console.log(CONSOLE_SYMBOLS.WARNING, cdkInstanceClass);
+		for await (const { InstanceTypes = [] } of paginator) {
+			instanceTypes.push(...InstanceTypes);
 		}
+
+		return instanceTypes;
 	}
 
-	for (const sdkInstanceClass of sdkInstanceClasses) {
-		if (InstanceClassIgnoredValues.includes(sdkInstanceClass)) continue;
-
-		if (!cdkInstanceClasses.includes(sdkInstanceClass)) {
-			console.log(CONSOLE_SYMBOLS.ADD_BOX, sdkInstanceClass);
+	private static getInstanceComponentsFromTypeInfo({
+		InstanceType,
+	}: InstanceTypeInfo) {
+		const components = (InstanceType ?? "").split(".");
+		if (components.length !== 2) {
+			throw new Error(
+				`Cannot parse instance class and size for type ${InstanceType}`,
+			);
 		}
+
+		const [instanceClass, instanceSize] = components;
+
+		return { instanceClass, instanceSize };
 	}
-};
 
-const runInstanceSizes = async () => {
-	const sdkInstanceSizes = getInstanceSizes(await getInstanceTypeInfo());
-	const cdkInstanceSizes = getCDKInstanceSizes();
-
-	for (const cdkInstanceSize of cdkInstanceSizes) {
-		// Instance sizes do not get deprecated, they should never "disappear"
-		if (!sdkInstanceSizes.includes(cdkInstanceSize)) {
-			console.log(CONSOLE_SYMBOLS.WARNING, cdkInstanceSize);
+	protected async fetchSdkVersions() {
+		if (!Ec2InstanceTypeRunner.fetchInstanceTypeInfoPromise) {
+			Ec2InstanceTypeRunner.fetchInstanceTypeInfoPromise =
+				this.fetchInstanceTypeInfo();
 		}
-	}
 
-	for (const sdkInstanceSize of sdkInstanceSizes) {
-		// if (InstanceSizeIgnoredValues.includes(sdkInstanceSize)) continue;
+		const instanceTypes =
+			await Ec2InstanceTypeRunner.fetchInstanceTypeInfoPromise;
 
-		if (!cdkInstanceSizes.includes(sdkInstanceSize)) {
-			console.log(CONSOLE_SYMBOLS.ADD_BOX, sdkInstanceSize);
+		const instanceVersions = new Set<InstanceType>();
+		for (const instanceType of instanceTypes) {
+			instanceVersions.add(
+				Ec2InstanceTypeRunner.getInstanceComponentsFromTypeInfo(instanceType)[
+					this.type
+				] as InstanceType,
+			);
 		}
-	}
-};
 
-if (process.env.NODE_ENV !== "test") void runWindows();
-if (process.env.NODE_ENV !== "test") void runInstanceClasses();
-if (process.env.NODE_ENV !== "test") void runInstanceSizes();
+		return Array.from(instanceVersions).map((version) => ({
+			version,
+			isDeprecated: false,
+		}));
+	}
+
+	protected async generateCdkVersions() {
+		return (
+			this.type === "instanceClass"
+				? getCDKInstanceClasses
+				: getCDKInstanceSizes
+		)() as DeprecableVersion<InstanceType>[];
+	}
+
+	protected getCdkVersionId(version: InstanceType) {
+		return version;
+	}
+
+	protected getSdkVersionId(version: InstanceType) {
+		return version;
+	}
+}
+
+export class Ec2InstanceClassRunner extends Ec2InstanceTypeRunner<InstanceClass> {
+	constructor() {
+		super("instanceClass");
+	}
+}
+
+export class Ec2InstanceSizeRunner extends Ec2InstanceTypeRunner<InstanceSize> {
+	constructor() {
+		super("instanceSize");
+	}
+}

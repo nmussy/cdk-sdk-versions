@@ -243,6 +243,7 @@ export interface IStaticField {
 	fieldName: string;
 	fieldValue: string;
 	isDeprecated: boolean;
+	comment?: tsdoc.DocComment;
 }
 
 export function getStaticFieldComments(filename: string) {
@@ -277,8 +278,8 @@ export function getStaticFieldComments(filename: string) {
 			groups: { className },
 		} = classMatch;
 
-		const isDeprecated = !!parseTSDoc({ compilerNode, textRange })
-			?.deprecatedBlock;
+		const comment = parseTSDoc({ compilerNode, textRange });
+		const isDeprecated = !!comment?.deprecatedBlock;
 
 		const existingField = foundFields.find(
 			(member) =>
@@ -299,6 +300,7 @@ export function getStaticFieldComments(filename: string) {
 			fieldName,
 			fieldValue,
 			isDeprecated,
+			comment,
 		});
 	}
 
@@ -314,6 +316,7 @@ export interface IEnumMember {
 	memberName: string;
 	memberValue: string;
 	isDeprecated: boolean;
+	comment?: tsdoc.DocComment;
 }
 
 export function getEnumValuesComments(filename: string) {
@@ -347,8 +350,8 @@ export function getEnumValuesComments(filename: string) {
 			groups: { enumName },
 		} = enumMatch;
 
-		const isDeprecated = !!parseTSDoc({ compilerNode, textRange })
-			?.deprecatedBlock;
+		const comment = parseTSDoc({ compilerNode, textRange });
+		const isDeprecated = !!comment?.deprecatedBlock;
 
 		const existingMember = foundMembers.find(
 			(member) =>
@@ -364,6 +367,7 @@ export function getEnumValuesComments(filename: string) {
 			memberName,
 			memberValue,
 			isDeprecated,
+			comment,
 		});
 	}
 
