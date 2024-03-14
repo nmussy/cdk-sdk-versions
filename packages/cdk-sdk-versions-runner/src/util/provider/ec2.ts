@@ -3,6 +3,7 @@ import {
 	InstanceSize,
 	WindowsVersion,
 } from "aws-cdk-lib/aws-ec2";
+import type { DeprecableVersion } from "../../runner";
 import { CdkLibPath } from "../cdk";
 import { getEnumValuesComments } from "../tsdoc";
 
@@ -10,30 +11,24 @@ export const CDK_LIB_WINDOWS_VERSIONS_PATH = new CdkLibPath(
 	"aws-ec2/lib/windows-versions.d.ts",
 );
 
-export interface DeprecableWindowsVersion {
-	windowsVersion: WindowsVersion;
-	isDeprecated: boolean;
-}
-
 export const getCDKWindowsVersions = () => {
-	const windowsVersions: DeprecableWindowsVersion[] = [];
+	const windowsVersions: DeprecableVersion<WindowsVersion>[] = [];
 
 	for (const { memberName, memberValue, isDeprecated } of getEnumValuesComments(
 		CDK_LIB_WINDOWS_VERSIONS_PATH.auto,
 	)) {
-		let windowsVersion: WindowsVersion;
+		let version: WindowsVersion;
 		if (memberName in WindowsVersion) {
-			windowsVersion =
-				WindowsVersion[memberName as keyof typeof WindowsVersion];
+			version = WindowsVersion[memberName as keyof typeof WindowsVersion];
 		} else {
 			console.warn(
 				`Unknown version: ${memberName}, replacing with ${memberName} = "${memberValue}"`,
 			);
-			windowsVersion = memberValue as WindowsVersion;
+			version = memberValue as WindowsVersion;
 		}
 
 		windowsVersions.push({
-			windowsVersion,
+			version,
 			isDeprecated,
 		});
 	}

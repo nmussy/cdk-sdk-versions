@@ -5,7 +5,12 @@ import {
 	type Image,
 	type InstanceTypeInfo,
 } from "@aws-sdk/client-ec2";
-import type { InstanceClass, InstanceSize } from "aws-cdk-lib/aws-ec2";
+import type {
+	InstanceClass,
+	InstanceSize,
+	WindowsVersion,
+} from "aws-cdk-lib/aws-ec2";
+import { CdkSdkVersionRunner } from "../runner";
 import { CONSOLE_SYMBOLS } from "../util";
 import {
 	InstanceClassIgnoredValues,
@@ -14,32 +19,64 @@ import {
 	getCDKWindowsVersions,
 } from "../util/provider/ec2";
 
+export const __MISSING_IMAGE_NAME__ = "__MISSING_IMAGE_NAME__";
+
 const client = new EC2Client({});
-export const getWindowsSsmImages = async () => {
-	const images: Image[] = [];
-	const imageNames = new Set<string>();
-
-	const paginator = paginateDescribeImages(
-		{ client, pageSize: 100 },
-		{
-			Owners: ["amazon"],
-			Filters: [{ Name: "name", Values: ["Windows_Server*"] }],
-		},
-	);
-
-	for await (const { Images = [] } of paginator) {
-		for (const image of Images) {
-			if (!image.Name) continue;
-
-			if (!imageNames.has(image.Name)) {
-				imageNames.add(image.Name);
-				images.push(image);
-			}
-		}
+export class Ec2WindowsImagesRunner extends CdkSdkVersionRunner<
+	WindowsVersion,
+	Image
+> {
+	constructor() {
+		super("Ec2WindowsImages");
 	}
 
-	return images;
-};
+	protected async generateCdkVersions() {
+		return getCDKWindowsVersions();
+	}
+
+	protected async fetchSdkVersions() {
+		const images: Image[] = [];
+		const imageNames = new Set<string>();
+
+		const paginator = paginateDescribeImages(
+			{ client, pageSize: 100 },
+			{
+				Owners: ["amazon"],
+				Filters: [{ Name: "name", Values: ["Windows_Server*"] }],
+			},
+		);
+
+		for await (const { Images = [] } of paginator) {
+			for (const image of Images) {
+				if (!image.Name) continue;
+
+				if (!imageNames.has(image.Name)) {
+					imageNames.add(image.Name);
+					images.push(image);
+				}
+			}
+		}
+
+		return images.map((version) => ({ version, isDeprecated: false }));
+	}
+
+	protected getCdkVersionId(version: WindowsVersion) {
+		return version as string;
+	}
+
+	protected getSdkVersionId({ Name }: Image) {
+		return Name ?? __MISSING_IMAGE_NAME__;
+	}
+
+	// TODO
+	private getWindowsVersionEnumKey = (windowsVersion: string) =>
+		windowsVersion.toLocaleUpperCase().replace(/[-.]/g, "_");
+}
+
+class Ec2InstanceTypeRunner extends CdkSdkVersionRunner<
+	InstanceClass | InstanceSize,
+	InstanceTypeInfo
+> {}
 
 export const getInstanceComponentsFromTypeInfo = ({
 	InstanceType,
@@ -91,60 +128,6 @@ export const getInstanceSizes = (instanceTypes: InstanceTypeInfo[]) => {
 	}
 
 	return Array.from(instanceSizes);
-};
-
-const getWindowsVersionEnumKey = (windowsVersion: string) =>
-	windowsVersion.toLocaleUpperCase().replace(/[-.]/g, "_");
-
-const runWindows = async () => {
-	const sdkImages = await getWindowsSsmImages();
-	const cdkVersions = getCDKWindowsVersions();
-
-	for (const cdkVersion of cdkVersions) {
-		const sdkImage = sdkImages.find(
-			({ Name = "" }) => cdkVersion.windowsVersion === Name,
-		);
-
-		const isSdkVersionDeprecated = sdkImage?.State !== "available";
-
-		if (!sdkImage) {
-			if (cdkVersion.isDeprecated) continue;
-
-			console.log(CONSOLE_SYMBOLS.DELETE_BOX, cdkVersion.windowsVersion);
-		} else if (!cdkVersion.isDeprecated && isSdkVersionDeprecated) {
-			console.log(
-				CONSOLE_SYMBOLS.UPDATE_BOX,
-				cdkVersion.windowsVersion,
-				"@deprecated",
-			);
-		} else if (cdkVersion.isDeprecated && !isSdkVersionDeprecated) {
-			console.log(
-				CONSOLE_SYMBOLS.UPDATE_BOX,
-				cdkVersion.windowsVersion,
-				"not @deprecated",
-			);
-		}
-	}
-
-	for (const sdkImage of sdkImages) {
-		if (!sdkImage.Name) continue;
-
-		const cdkVersion = cdkVersions.find(
-			({ windowsVersion }) => windowsVersion === sdkImage.Name,
-		);
-
-		if (!cdkVersion) {
-			const isSdkVersionDeprecated = sdkImage?.State !== "available";
-			console.log(
-				CONSOLE_SYMBOLS.ADD_BOX,
-				sdkImage.Name,
-				isSdkVersionDeprecated ? "@deprecated" : "",
-			);
-			console.log(
-				`${getWindowsVersionEnumKey(sdkImage.Name)} = '${sdkImage.Name}',`,
-			);
-		}
-	}
 };
 
 const runInstanceClasses = async () => {
