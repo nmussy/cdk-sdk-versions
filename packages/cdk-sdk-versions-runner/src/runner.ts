@@ -50,7 +50,20 @@ const generateEmptyRunnerResults = <TCdk, TSdk>(): RunnerResults<
 });
 
 export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
-	protected constructor(protected readonly identifier: string) {}
+	// Prevent performing needless SDK requests/TypeScript parsing
+	// by preventing multiple instances of the same runner
+	// Each runner is then responsible for its own caching scheme
+	private static singletons: CdkSdkVersionRunner<unknown, unknown>[] = [];
+
+	protected constructor(protected readonly identifier: string) {
+		if (
+			CdkSdkVersionRunner.singletons.find(
+				(runner) => runner instanceof this.constructor,
+			)
+		)
+			throw new Error(`Should not create multiple instances of ${identifier}`);
+		CdkSdkVersionRunner.singletons.push(this);
+	}
 
 	protected abstract generateCdkVersions(): Promise<DeprecableVersion<TCdk>[]>;
 	protected abstract fetchSdkVersions(): Promise<DeprecableVersion<TSdk>[]>;
