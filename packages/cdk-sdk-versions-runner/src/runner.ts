@@ -28,6 +28,8 @@ const runnerActionConsoleTaggedTemplate: {
 		`${CONSOLE_SYMBOLS.DELETE_BOX} ${version}`,
 };
 
+const ignoredActions: RunnerActions[] = [RunnerActions.ADD_AS_DEPRECATED];
+
 type RunnerResult<TCdk, TSdk> = {
 	result: string;
 	cdkVersion?: TCdk;
@@ -138,8 +140,10 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 		for (const [action, results] of Object.entries(runnerResults) as Entries<
 			RunnerResults<TCdk, TSdk>
 		>) {
+			if (ignoredActions.includes(action)) continue;
+
 			results
-				.sort()
+				.sort(({ result: a }, { result: b }) => a.localeCompare(b))
 				.map(({ result }) =>
 					console.log(runnerActionConsoleTaggedTemplate[action](result)),
 				);
