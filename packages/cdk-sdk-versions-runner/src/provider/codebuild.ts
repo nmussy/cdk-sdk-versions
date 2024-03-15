@@ -4,13 +4,20 @@ import {
 	type EnvironmentLanguage,
 } from "@aws-sdk/client-codebuild";
 import { Architecture } from "@aws-sdk/client-lambda";
-import type { IBuildImage } from "aws-cdk-lib/aws-codebuild";
-import { groupBy, mapValues } from "lodash";
-import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
 import {
-	getCDKCodeBuildImages,
-	type BuildImageClass,
-} from "../util/provider/codebuild";
+	LinuxArmBuildImage,
+	LinuxArmLambdaBuildImage,
+	LinuxBuildImage,
+	LinuxLambdaBuildImage,
+	WindowsBuildImage,
+	type IBuildImage,
+} from "aws-cdk-lib/aws-codebuild";
+import { groupBy, mapValues } from "lodash";
+import { join } from "node:path";
+import type { Entries } from "type-fest";
+import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
+import { CdkLibPath, type CdkPath } from "../util/cdk";
+import { getStaticFieldComments, type IStaticField } from "../util/tsdoc";
 
 /**
  * Temporary fix, waiting for AWS to correct its typings
@@ -24,16 +31,74 @@ enum PlatformType {
 	WINDOWS_SERVER_2022 = "WINDOWS_SERVER_2022",
 }
 
-export const MISSING_LANGUAGE_NAME = "__MISSING_LANGUAGE_NAME__";
-export const MISSING_IMAGE_NAME = "__MISSING_IMAGE_NAME__";
+export type BuildImageClass =
+	| "WindowsBuildImage"
+	| "LinuxBuildImage"
+	| "LinuxArmBuildImage"
+	// Pending https://github.com/aws/deep-learning-containers/issues/2732
+	// | "LinuxGpuBuildImage"
+	| "LinuxLambdaBuildImage"
+	| "LinuxArmLambdaBuildImage";
 
 type SdkBuildImageMap = { [image in BuildImageClass]: string[] };
 type CdkBuildImageMap = {
 	[image in BuildImageClass]: DeprecableVersion<IBuildImage>[];
 };
 
-const client = new CodeBuildClient({});
-class CodeBuildImageRunner extends CdkSdkVersionRunner<IBuildImage, string> {
+class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
+	T,
+	string
+> {
+	private static readonly client = new CodeBuildClient({});
+
+	public static readonly MISSING_LANGUAGE_NAME = "__MISSING_LANGUAGE_NAME__";
+	public static readonly MISSING_IMAGE_NAME = "__MISSING_IMAGE_NAME__";
+
+	private static readonly libPath = "aws-codebuild/lib";
+	private static readonly projectPath = new CdkLibPath(
+		join(CodeBuildImageRunner.libPath, "project.d.ts"),
+	);
+	private static readonly linuxArmPath = new CdkLibPath(
+		join(CodeBuildImageRunner.libPath, "linux-arm-build-image.d.ts"),
+	);
+	private static readonly lambdaPath = new CdkLibPath(
+		join(CodeBuildImageRunner.libPath, "linux-lambda-build-image.d.ts"),
+	);
+	private static readonly lambdaArmPath = new CdkLibPath(
+		join(CodeBuildImageRunner.libPath, "linux-arm-lambda-build-image.d.ts"),
+	);
+	private static readonly imageBuildPath: {
+		[image in BuildImageClass]: CdkPath;
+	} = {
+		WindowsBuildImage: CodeBuildImageRunner.projectPath,
+		LinuxBuildImage: CodeBuildImageRunner.projectPath,
+		LinuxArmBuildImage: CodeBuildImageRunner.linuxArmPath,
+		LinuxLambdaBuildImage: CodeBuildImageRunner.lambdaPath,
+		LinuxArmLambdaBuildImage: CodeBuildImageRunner.lambdaArmPath,
+	};
+
+	private static getBuildClass(imageClass: BuildImageClass) {
+		switch (imageClass) {
+			case "WindowsBuildImage":
+				return WindowsBuildImage;
+			case "LinuxBuildImage":
+				return LinuxBuildImage;
+			case "LinuxArmBuildImage":
+				return LinuxArmBuildImage;
+			case "LinuxLambdaBuildImage":
+				return LinuxLambdaBuildImage;
+			case "LinuxArmLambdaBuildImage":
+				return LinuxArmLambdaBuildImage;
+			default:
+				throw new Error(`Unknown image class: ${imageClass}`);
+		}
+	}
+
+	private static readonly imageFromFactoryRegex =
+		/\w+.fromCodeBuildImageId\('(?<imageId>[\w.-]+)'\)/;
+	private static readonly imageObjectFactoryRegex =
+		/^\s*imageId: '(?<imageId>[\w\/.:-]+)'/m;
+
 	constructor(protected readonly imageClassName: BuildImageClass) {
 		super(`CodeBuild${imageClassName}`);
 	}
@@ -41,7 +106,7 @@ class CodeBuildImageRunner extends CdkSdkVersionRunner<IBuildImage, string> {
 	private static getFlatImageIds(languages: EnvironmentLanguage[]) {
 		return languages
 			.flatMap(({ images = [] }) => images)
-			.map(({ name = MISSING_IMAGE_NAME }) => name);
+			.map(({ name = CodeBuildImageRunner.MISSING_IMAGE_NAME }) => name);
 	}
 
 	private static getArchitectureFromImageId(imageId: string) {
@@ -54,7 +119,7 @@ class CodeBuildImageRunner extends CdkSdkVersionRunner<IBuildImage, string> {
 			groupBy(
 				languages
 					.flatMap(({ images = [] }) => images)
-					.map(({ name = MISSING_IMAGE_NAME }) => [
+					.map(({ name = CodeBuildImageRunner.MISSING_IMAGE_NAME }) => [
 						CodeBuildImageRunner.getArchitectureFromImageId(name),
 						name,
 					]),
@@ -69,7 +134,7 @@ class CodeBuildImageRunner extends CdkSdkVersionRunner<IBuildImage, string> {
 		if (CodeBuildImageRunner.fetchSdkBuildImagesPromise)
 			return CodeBuildImageRunner.fetchSdkBuildImagesPromise;
 
-		const { platforms = [] } = await client.send(
+		const { platforms = [] } = await CodeBuildImageRunner.client.send(
 			new ListCuratedEnvironmentImagesCommand({}),
 		);
 
@@ -129,16 +194,74 @@ class CodeBuildImageRunner extends CdkSdkVersionRunner<IBuildImage, string> {
 		].map((version) => ({ version, isDeprecated: false }));
 	}
 
+	private static async generateCdkBuildImages() {
+		const images: {
+			[image in BuildImageClass]: DeprecableVersion<IBuildImage>[];
+		} = {
+			WindowsBuildImage: [],
+			LinuxBuildImage: [],
+			LinuxArmBuildImage: [],
+			LinuxLambdaBuildImage: [],
+			LinuxArmLambdaBuildImage: [],
+		};
+
+		const staticFields: { [path: string]: IStaticField[] } = {};
+
+		for (const [imageClassName, { auto: path }] of Object.entries(
+			CodeBuildImageRunner.imageBuildPath,
+		) as Entries<typeof CodeBuildImageRunner.imageBuildPath>) {
+			if (!staticFields[path]) {
+				staticFields[path] = getStaticFieldComments(path);
+			}
+
+			for (const {
+				className,
+				fieldName,
+				fieldValue,
+				isDeprecated,
+			} of staticFields[path]) {
+				if (className !== imageClassName) continue;
+
+				const imageClass = CodeBuildImageRunner.getBuildClass(imageClassName);
+
+				let version: IBuildImage;
+				if (fieldName in imageClass) {
+					version = imageClass[fieldName as keyof typeof imageClass];
+				} else {
+					const match =
+						fieldValue.match(CodeBuildImageRunner.imageFromFactoryRegex) ??
+						fieldValue.match(CodeBuildImageRunner.imageObjectFactoryRegex);
+
+					if (!match?.groups) throw new Error(`Unknown version: ${fieldValue}`);
+					const {
+						groups: { imageId },
+					} = match;
+					console.warn(
+						`Unknown version: ${fieldName}, replacing with new ${className}("${imageId}")`,
+					);
+
+					// FIXME cannot use .fromCodeBuildImageId(), missing from WindowsBuildImage
+					// @ts-ignore private constructor
+					version = new imageClass(imageId);
+				}
+
+				images[imageClassName].push({ version, isDeprecated });
+			}
+		}
+
+		return images;
+	}
+
 	// FIXME inneficient, parses all image classes, should only cache required files
 	private static generateCdkBuildImagesPromise: Promise<CdkBuildImageMap>;
 	protected async generateCdkVersions() {
 		if (!CodeBuildImageRunner.generateCdkBuildImagesPromise)
-			CodeBuildImageRunner.generateCdkBuildImagesPromise = (async () =>
-				getCDKCodeBuildImages())();
+			CodeBuildImageRunner.generateCdkBuildImagesPromise =
+				CodeBuildImageRunner.generateCdkBuildImages();
 
 		return (await CodeBuildImageRunner.generateCdkBuildImagesPromise)[
 			this.imageClassName
-		];
+		] as DeprecableVersion<T>[];
 	}
 
 	protected getCdkVersionId({ imageId }: IBuildImage) {
@@ -150,31 +273,31 @@ class CodeBuildImageRunner extends CdkSdkVersionRunner<IBuildImage, string> {
 	}
 }
 
-export class WindowsBuildImageRunner extends CodeBuildImageRunner {
+export class WindowsBuildImageRunner extends CodeBuildImageRunner<WindowsBuildImage> {
 	constructor() {
 		super("WindowsBuildImage");
 	}
 }
 
-export class LinuxBuildImageRunner extends CodeBuildImageRunner {
+export class LinuxBuildImageRunner extends CodeBuildImageRunner<LinuxBuildImage> {
 	constructor() {
 		super("LinuxBuildImage");
 	}
 }
 
-export class LinuxArmBuildImageRunner extends CodeBuildImageRunner {
+export class LinuxArmBuildImageRunner extends CodeBuildImageRunner<LinuxArmBuildImage> {
 	constructor() {
 		super("LinuxArmBuildImage");
 	}
 }
 
-export class LinuxLambdaBuildImageRunner extends CodeBuildImageRunner {
+export class LinuxLambdaBuildImageRunner extends CodeBuildImageRunner<LinuxLambdaBuildImage> {
 	constructor() {
 		super("LinuxLambdaBuildImage");
 	}
 }
 
-export class LinuxArmLambdaBuildImageRunner extends CodeBuildImageRunner {
+export class LinuxArmLambdaBuildImageRunner extends CodeBuildImageRunner<LinuxArmLambdaBuildImage> {
 	constructor() {
 		super("LinuxArmLambdaBuildImage");
 	}
