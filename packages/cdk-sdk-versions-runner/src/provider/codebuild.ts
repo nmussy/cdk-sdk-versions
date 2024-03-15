@@ -12,7 +12,10 @@ import {
 	type BuildImageClass,
 } from "../util/provider/codebuild";
 
-// FIXME remove, use CodeBuild.PlatformType
+/**
+ * Temporary fix, waiting for AWS to correct its typings
+ * @see https://repost.aws/questions/QUZ-_XDwHzTDqyoICmpx-M_g/invalid-platform-values-for-listcuratedenvironmentimages-output
+ **/
 enum PlatformType {
 	AMAZON_LINUX = "AMAZON_LINUX",
 	AMAZON_LINUX_2 = "AMAZON_LINUX_2",
