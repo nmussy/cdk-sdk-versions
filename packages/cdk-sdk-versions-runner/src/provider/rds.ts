@@ -1,3 +1,6 @@
+import { CdkSdkVersionRunner, type DeprecableVersion } from "@app/runner";
+import { CdkLibPath } from "@app/util/cdk";
+import { getStaticFieldComments } from "@app/util/tsdoc";
 import {
 	RDSClient,
 	paginateDescribeDBEngineVersions,
@@ -12,29 +15,229 @@ import {
 	PostgresEngineVersion,
 	SqlServerEngineVersion,
 } from "aws-cdk-lib/aws-rds";
-import { CdkSdkVersionRunner } from "../runner";
-import {
-	AuroraEngines,
-	OracleEngines,
-	RdsEngine,
-	SqlServerEngines,
-	getCDKClusterEngineVersions,
-	getCDKInstanceEngineVersions,
-	getVersionFromCdkEngineVersion,
-	type CdkEngineVersion,
-	type CdkEngineVersionType,
-	type DeprecableEngineVersion,
-	type EngineKey,
-} from "../util/provider/rds";
+import { isEqualWith } from "lodash";
 
-export const MISSING_ENGINE_VERSION = "__MISSING_ENGINE_VERSION__";
-export const MISSING_MAJOR_ENGINE_VERSION = "__MISSING_MAJOR_ENGINE_VERSION__";
+export enum RdsEngine {
+	AURORA_MYSQL = "aurora-mysql",
+	AURORA_POSTGRESQL = "aurora-postgresql",
+	CUSTOM_ORACLE_EE = "custom-oracle-ee",
+	DB2_AE = "db2-ae",
+	DB2_SE = "db2-se",
+	MARIADB = "mariadb",
+	MYSQL = "mysql",
+	ORACLE_EE = "oracle-ee",
+	ORACLE_EE_CDB = "oracle-ee-cdb",
+	ORACLE_SE2 = "oracle-se2",
+	ORACLE_SE2_CDB = "oracle-se2-cdb",
+	POSTGRES = "postgres",
+	SQLSERVER_EE = "sqlserver-ee",
+	SQLSERVER_SE = "sqlserver-se",
+	SQLSERVER_EX = "sqlserver-ex",
+	SQLSERVER_WEB = "sqlserver-web",
+}
 
-const client = new RDSClient({});
+const ClusterEngines = [RdsEngine.AURORA_MYSQL, RdsEngine.AURORA_POSTGRESQL];
+
+export type CdkEngineVersionType =
+	| typeof OracleEngineVersion
+	| typeof MysqlEngineVersion
+	| typeof MariaDbEngineVersion
+	| typeof PostgresEngineVersion
+	| typeof SqlServerEngineVersion
+	| typeof AuroraMysqlEngineVersion
+	| typeof AuroraPostgresEngineVersion;
+
+/* export type CdkEngineVersion = ReturnType<//@ts-ignore private constructor
+CdkEngineVersionType>; */
+
+export type CdkEngineVersion =
+	| OracleEngineVersion
+	| MysqlEngineVersion
+	| MariaDbEngineVersion
+	| PostgresEngineVersion
+	| SqlServerEngineVersion
+	| AuroraMysqlEngineVersion
+	| AuroraPostgresEngineVersion;
+
+type CdkInstanceEngineVersion = Exclude<
+	CdkEngineVersion,
+	"AuroraMysqlEngineVersion" | "AuroraPostgresEngineVersion"
+>;
+type CdkClusterEngineVersion =
+	| AuroraMysqlEngineVersion
+	| AuroraPostgresEngineVersion;
+
+const CdkEngineVersionNameMap = {
+	OracleEngineVersion: OracleEngineVersion,
+	MysqlEngineVersion: MysqlEngineVersion,
+	MariaDbEngineVersion: MariaDbEngineVersion,
+	PostgresEngineVersion: PostgresEngineVersion,
+	SqlServerEngineVersion: SqlServerEngineVersion,
+	AuroraMysqlEngineVersion: AuroraMysqlEngineVersion,
+	AuroraPostgresEngineVersion: AuroraPostgresEngineVersion,
+} as const;
+
+type EngineUtil<T extends CdkEngineVersion> = {
+	isVersion: (version: CdkEngineVersion) => version is T;
+	getVersion: (version: T) => { fullVersion: string; majorVersion: string };
+};
+
+const EngineUtils = {
+	// Instance engines
+	OracleEngineVersion: {
+		isVersion: (version: CdkEngineVersion): version is OracleEngineVersion =>
+			!!(version as OracleEngineVersion).oracleFullVersion,
+		getVersion: (version: OracleEngineVersion) => ({
+			fullVersion: version.oracleFullVersion,
+			majorVersion: version.oracleMajorVersion,
+		}),
+	} satisfies EngineUtil<OracleEngineVersion>,
+	MysqlEngineVersion: {
+		isVersion: (version: CdkEngineVersion): version is MysqlEngineVersion =>
+			!!(version as MysqlEngineVersion).mysqlFullVersion,
+		getVersion: (version: MysqlEngineVersion) => ({
+			fullVersion: version.mysqlFullVersion,
+			majorVersion: version.mysqlMajorVersion,
+		}),
+	} satisfies EngineUtil<MysqlEngineVersion>,
+	MariaDbEngineVersion: {
+		isVersion: (version: CdkEngineVersion): version is MariaDbEngineVersion =>
+			!!(version as MariaDbEngineVersion).mariaDbFullVersion,
+		getVersion: (version: MariaDbEngineVersion) => ({
+			fullVersion: version.mariaDbFullVersion,
+			majorVersion: version.mariaDbMajorVersion,
+		}),
+	} satisfies EngineUtil<MariaDbEngineVersion>,
+	PostgresEngineVersion: {
+		isVersion: (version: CdkEngineVersion): version is PostgresEngineVersion =>
+			!!(version as PostgresEngineVersion).postgresFullVersion,
+		getVersion: (version: PostgresEngineVersion) => ({
+			fullVersion: version.postgresFullVersion,
+			majorVersion: version.postgresMajorVersion,
+		}),
+	} satisfies EngineUtil<PostgresEngineVersion>,
+	SqlServerEngineVersion: {
+		isVersion: (version: CdkEngineVersion): version is SqlServerEngineVersion =>
+			!!(version as SqlServerEngineVersion).sqlServerFullVersion,
+		getVersion: (version: SqlServerEngineVersion) => ({
+			fullVersion: version.sqlServerFullVersion,
+			majorVersion: version.sqlServerMajorVersion,
+		}),
+	} satisfies EngineUtil<SqlServerEngineVersion>,
+
+	// Cluster engines
+	AuroraMysqlEngineVersion: {
+		isVersion: (
+			version: CdkEngineVersion,
+		): version is AuroraMysqlEngineVersion =>
+			!!(version as AuroraMysqlEngineVersion).auroraMysqlFullVersion,
+		getVersion: (version: AuroraMysqlEngineVersion) => ({
+			fullVersion: version.auroraMysqlFullVersion,
+			majorVersion: version.auroraMysqlMajorVersion,
+		}),
+	} satisfies EngineUtil<AuroraMysqlEngineVersion>,
+	AuroraPostgresEngineVersion: {
+		isVersion: (
+			version: CdkEngineVersion,
+		): version is AuroraPostgresEngineVersion =>
+			!!(version as AuroraPostgresEngineVersion).auroraPostgresFullVersion,
+		getVersion: (version: AuroraPostgresEngineVersion) => ({
+			fullVersion: version.auroraPostgresFullVersion,
+			majorVersion: version.auroraPostgresMajorVersion,
+		}),
+	} satisfies EngineUtil<AuroraPostgresEngineVersion>,
+};
+
+// type EngineKey = keyof typeof EngineUtils;
+type CdkEngineVersionName = keyof typeof CdkEngineVersionNameMap;
+
+export const getVersionFromCdkEngineVersion = (
+	engineVersion: CdkEngineVersion,
+) => {
+	for (const util of Object.values(
+		EngineUtils,
+	) as EngineUtil<CdkEngineVersion>[]) {
+		if (util.isVersion(engineVersion)) return util.getVersion(engineVersion);
+	}
+
+	throw new Error(`Unknown engine version: ${JSON.stringify(engineVersion)}`);
+};
+
+export type DeprecableEngineVersion<T extends CdkEngineVersion> =
+	DeprecableVersion<T>;
+
+const getVersion = <T extends CdkEngineVersionType>(
+	engineName: CdkEngineVersionName,
+	fieldName: keyof T & string,
+	engineVersionEnum: T,
+) => {
+	if (engineVersionEnum[fieldName]) return engineVersionEnum[fieldName] as T;
+
+	let fullVersion = fieldName
+		.replace(/^VER_/, "")
+		.replace(/_/g, ".")
+		.toLocaleLowerCase();
+
+	if (engineName === "OracleEngineVersion") {
+		fullVersion = fullVersion.replace(
+			// Add 'ru-' and 'rur-' prefixes to the last three parts
+			/\.(\d{4})\.(\d{2})\.[rR](\w+)$/,
+			".ru-$1-$2.rur-$1-$2.r$3",
+		);
+	}
+
+	const versionComponents = fullVersion.split(".");
+
+	let majorVersion = versionComponents
+		.slice(
+			0,
+			engineName === "OracleEngineVersion"
+				? 1
+				: engineName === "SqlServerEngineVersion"
+				  ? 2
+				  : versionComponents.length - 1,
+		)
+		.join(".");
+
+	if (engineName === "AuroraMysqlEngineVersion") {
+		const mysqlBuiltInVersion =
+			Number(versionComponents[0]) <= 2 ? "5.7" : "8.0";
+
+		fullVersion = `${mysqlBuiltInVersion}.mysql_aurora.${fullVersion}`;
+		majorVersion = mysqlBuiltInVersion;
+	}
+
+	console.warn(
+		`Unknown version: ${engineName}.${fieldName}, replacing with .of("${fullVersion}", "${majorVersion}")`,
+	);
+
+	return engineVersionEnum.of(fullVersion, majorVersion) as unknown as T;
+};
+
+/* export const getCDKInstanceEngineVersions = <
+	T extends CdkEngineVersion = CdkEngineVersion,
+>() => _getCDKVersions<T>(CDK_LIB_INSTANCE_ENGINE_PATH.auto);
+
+export const getCDKClusterEngineVersions = <
+	T extends CdkEngineVersion = CdkEngineVersion,
+>() => _getCDKVersions<T>(CDK_LIB_CLUSTER_ENGINE_PATH.auto); */
 
 class RdsEngineRunner<
 	EngineVersion extends CdkEngineVersion,
 > extends CdkSdkVersionRunner<EngineVersion, EngineVersion> {
+	private static readonly client = new RDSClient({});
+
+	private static readonly instanceEnginePath = new CdkLibPath(
+		"aws-rds/lib/instance-engine.d.ts",
+	);
+	private static readonly clusterEnginePath = new CdkLibPath(
+		"aws-rds/lib/cluster-engine.d.ts",
+	);
+
+	public static readonly MISSING_ENGINE_VERSION = "__MISSING_ENGINE_VERSION__";
+	public static readonly MISSING_MAJOR_ENGINE_VERSION =
+		"__MISSING_MAJOR_ENGINE_VERSION__";
+
 	constructor(
 		protected readonly engineVesionType: CdkEngineVersionType,
 		private readonly engines: RdsEngine[],
@@ -51,7 +254,7 @@ class RdsEngineRunner<
 	): Promise<DeprecableEngineVersion<EngineVersion>[]> {
 		const versions: DBEngineVersion[] = [];
 		const paginator = paginateDescribeDBEngineVersions(
-			{ client, pageSize: 100 },
+			{ client: RdsEngineRunner.client, pageSize: 100 },
 			{
 				Engine: engine,
 				IncludeAll: true,
@@ -64,8 +267,8 @@ class RdsEngineRunner<
 
 		return versions.map(
 			({
-				EngineVersion = MISSING_ENGINE_VERSION,
-				MajorEngineVersion = MISSING_MAJOR_ENGINE_VERSION,
+				EngineVersion = RdsEngineRunner.MISSING_ENGINE_VERSION,
+				MajorEngineVersion = RdsEngineRunner.MISSING_MAJOR_ENGINE_VERSION,
 				Status,
 			}) => ({
 				version: engiveVersionType.of(
@@ -97,30 +300,128 @@ class RdsEngineRunner<
 		return versions.flat();
 	}
 
+	private static _getCDKVersions<T extends CdkEngineVersion = CdkEngineVersion>(
+		filename: string,
+	) {
+		const engineVersions: DeprecableEngineVersion<T>[] = [];
+
+		for (const { className, fieldName, isDeprecated } of getStaticFieldComments(
+			filename,
+		)) {
+			if (
+				[
+					"DatabaseInstanceEngine",
+					"DatabaseClusterEngine",
+					"AuroraEngineVersion",
+				].includes(className)
+			)
+				continue;
+
+			let version: T;
+			switch (className) {
+				// Instance
+				case "MysqlEngineVersion":
+					version = getVersion(
+						className,
+						fieldName as keyof typeof MysqlEngineVersion,
+						MysqlEngineVersion,
+					) as unknown as T;
+					break;
+				case "OracleEngineVersion":
+					version = getVersion(
+						className,
+						fieldName as keyof typeof OracleEngineVersion,
+						OracleEngineVersion,
+					) as unknown as T;
+					break;
+				case "MariaDbEngineVersion":
+					version = getVersion(
+						className,
+						fieldName as keyof typeof MariaDbEngineVersion,
+						MariaDbEngineVersion,
+					) as unknown as T;
+					break;
+				case "PostgresEngineVersion":
+					version = getVersion(
+						className,
+						fieldName as keyof typeof PostgresEngineVersion,
+						PostgresEngineVersion,
+					) as unknown as T;
+					break;
+				case "SqlServerEngineVersion":
+					version = getVersion(
+						className,
+						fieldName as keyof typeof SqlServerEngineVersion,
+						SqlServerEngineVersion,
+					) as unknown as T;
+					break;
+
+				// Cluster
+				case "AuroraMysqlEngineVersion":
+					version = getVersion(
+						className,
+						fieldName as keyof typeof AuroraMysqlEngineVersion,
+						AuroraMysqlEngineVersion,
+					) as unknown as T;
+					break;
+				case "AuroraPostgresEngineVersion":
+					version = getVersion(
+						className,
+						fieldName as keyof typeof AuroraPostgresEngineVersion,
+						AuroraPostgresEngineVersion,
+					) as unknown as T;
+					break;
+				// Deprecated
+				case "OracleLegacyEngineVersion":
+					continue;
+				default:
+					throw new Error(`Unknown class name: ${className}`);
+			}
+
+			engineVersions.push({ version, isDeprecated });
+		}
+
+		return engineVersions;
+	}
+
 	private static fetchCdkInstanceEnginePromise: Promise<
-		DeprecableEngineVersion[]
+		DeprecableEngineVersion<CdkInstanceEngineVersion>[]
 	>;
 	private static fetchCdkClusterEnginePromise: Promise<
-		DeprecableEngineVersion[]
+		DeprecableEngineVersion<CdkClusterEngineVersion>[]
 	>;
 
 	protected async generateCdkVersions() {
-		const promises = new Set<Promise<DeprecableEngineVersion[]>>();
+		const promises = new Set<
+			Promise<DeprecableEngineVersion<EngineVersion>[]>
+		>();
 		for (const engine of this.engines) {
-			if (AuroraEngines.includes(engine)) {
+			if (ClusterEngines.includes(engine)) {
 				if (!RdsEngineRunner.fetchCdkClusterEnginePromise) {
 					RdsEngineRunner.fetchCdkClusterEnginePromise = (async () =>
-						getCDKClusterEngineVersions())();
+						RdsEngineRunner._getCDKVersions<CdkClusterEngineVersion>(
+							RdsEngineRunner.clusterEnginePath.auto,
+						))();
 				}
 
-				promises.add(RdsEngineRunner.fetchCdkClusterEnginePromise);
+				promises.add(
+					RdsEngineRunner.fetchCdkClusterEnginePromise as Promise<
+						DeprecableEngineVersion<EngineVersion>[]
+					>,
+				);
 			} else {
 				if (!RdsEngineRunner.fetchCdkInstanceEnginePromise) {
 					RdsEngineRunner.fetchCdkInstanceEnginePromise = (async () =>
-						getCDKInstanceEngineVersions())();
+						RdsEngineRunner._getCDKVersions<CdkInstanceEngineVersion>(
+							RdsEngineRunner.instanceEnginePath.auto,
+						))();
 				}
 
-				promises.add(RdsEngineRunner.fetchCdkInstanceEnginePromise);
+				promises.add(
+					RdsEngineRunner.fetchCdkInstanceEnginePromise as Promise<
+						DeprecableEngineVersion<EngineVersion>[]
+					>,
+				);
 			}
 		}
 
@@ -164,14 +465,28 @@ export class RdsPostgresEngineRunner extends RdsEngineRunner<PostgresEngineVersi
 }
 
 export class RdsOracleEngineRunner extends RdsEngineRunner<OracleEngineVersion> {
+	private static readonly engines: RdsEngine[] = [
+		RdsEngine.ORACLE_SE2,
+		RdsEngine.ORACLE_SE2_CDB,
+		RdsEngine.ORACLE_EE,
+		RdsEngine.ORACLE_EE_CDB,
+	];
+
 	constructor() {
-		super(OracleEngineVersion, OracleEngines);
+		super(OracleEngineVersion, RdsOracleEngineRunner.engines);
 	}
 }
 
 export class RdsSqlServerEngineRunner extends RdsEngineRunner<SqlServerEngineVersion> {
+	private static readonly engines: RdsEngine[] = [
+		RdsEngine.SQLSERVER_SE,
+		RdsEngine.SQLSERVER_EX,
+		RdsEngine.SQLSERVER_WEB,
+		RdsEngine.SQLSERVER_EE,
+	];
+
 	constructor() {
-		super(SqlServerEngineVersion, SqlServerEngines);
+		super(SqlServerEngineVersion, RdsSqlServerEngineRunner.engines);
 	}
 }
 
@@ -191,32 +506,15 @@ export class RdsAuroraPostgresEngineRunner extends RdsEngineRunner<AuroraPostgre
 // TODO integrate code generation in abstract runner
 // *****************************************************************************
 
-export const getSdkRdsEngineVersions = async (engine: RdsEngine) => {
-	const versions: DBEngineVersion[] = [];
-	const paginator = paginateDescribeDBEngineVersions(
-		{ client, pageSize: 100 },
-		{
-			Engine: engine,
-			IncludeAll: true,
-		},
-	);
-
-	for await (const { DBEngineVersions = [] } of paginator) {
-		versions.push(...DBEngineVersions);
-	}
-
-	return versions;
-};
-
-const stringifyEngineVersion = (
-	{ version }: DeprecableEngineVersion,
-	engineKey: EngineKey,
+const stringifyEngineVersion = <T extends CdkEngineVersion>(
+	{ version }: DeprecableEngineVersion<T>,
+	engineKey: CdkEngineVersionName,
 ) =>
 	`${engineKey}.${getVersionFromCdkEngineVersion(version)
 		.fullVersion.toLocaleUpperCase()
 		.replace(/\./g, "_")}`;
 
-const humanName: Record<EngineKey, string> = {
+const humanName: Record<CdkEngineVersionName, string> = {
 	PostgresEngineVersion: "PostgreSQL",
 	MysqlEngineVersion: "MySQL",
 	MariaDbEngineVersion: "MariaDB",
@@ -227,9 +525,9 @@ const humanName: Record<EngineKey, string> = {
 	AuroraPostgresEngineVersion: "Version",
 };
 
-const _getStaticComment = (
-	{ version, isDeprecated }: DeprecableEngineVersion,
-	engineKey: EngineKey,
+const _getStaticComment = <T extends CdkEngineVersion>(
+	{ version, isDeprecated }: DeprecableEngineVersion<T>,
+	engineKey: CdkEngineVersionName,
 ) => {
 	const { fullVersion } = getVersionFromCdkEngineVersion(version);
 
@@ -269,9 +567,9 @@ const getPostgresStaticFeatures = (engineVersion: CdkEngineVersion) => {
 	return /* ts */ `, { s3Import: true, s3Export: true }`;
 };
 
-const _getStaticInstance = (
-	{ version, isDeprecated }: DeprecableEngineVersion,
-	engineKey: EngineKey,
+const _getStaticInstance = <T extends CdkEngineVersion>(
+	{ version, isDeprecated }: DeprecableEngineVersion<T>,
+	engineKey: CdkEngineVersionName,
 ) => {
 	const { fullVersion, majorVersion } = getVersionFromCdkEngineVersion(version);
 
@@ -287,9 +585,9 @@ const _getStaticInstance = (
 `;
 };
 
-const getAuroraMysqlStatic = (
-	{ version, isDeprecated }: DeprecableEngineVersion,
-	engineKey: EngineKey,
+const getAuroraMysqlStatic = <T extends CdkEngineVersion>(
+	{ version, isDeprecated }: DeprecableEngineVersion<T>,
+	engineKey: CdkEngineVersionName,
 ) => {
 	const { fullVersion } = getVersionFromCdkEngineVersion(version);
 	const parts = fullVersion.split(".");
@@ -304,9 +602,9 @@ const getAuroraMysqlStatic = (
 `;
 };
 
-const getPostgresStatic = (
-	{ version, isDeprecated }: DeprecableEngineVersion,
-	engineKey: EngineKey,
+const getPostgresStatic = <T extends CdkEngineVersion>(
+	{ version, isDeprecated }: DeprecableEngineVersion<T>,
+	engineKey: CdkEngineVersionName,
 ) => {
 	const { fullVersion, majorVersion } = getVersionFromCdkEngineVersion(version);
 
@@ -321,9 +619,9 @@ const getPostgresStatic = (
 `;
 };
 
-const getStatic = (
-	engineVersion: DeprecableEngineVersion,
-	engineKey: EngineKey,
+const getStatic = <T extends CdkEngineVersion>(
+	engineVersion: DeprecableEngineVersion<T>,
+	engineKey: CdkEngineVersionName,
 ) => {
 	switch (engineKey) {
 		case "PostgresEngineVersion":
@@ -344,6 +642,15 @@ const getStatic = (
 			return "NOT IMPLEMENTED";
 	}
 };
+
+const compareEngineVersions = (a: CdkEngineVersion, b: CdkEngineVersion) =>
+	getVersionFromCdkEngineVersion(a).fullVersion ===
+	getVersionFromCdkEngineVersion(b).fullVersion;
+
+export const isEngineVersionEqualWith = (
+	a: CdkEngineVersion,
+	b: CdkEngineVersion,
+) => isEqualWith(a, b, compareEngineVersions);
 
 /* const runSdk = async ({ sdkEngines, cdkEngines, engineKey }: RunProps) => {
 	const guard = CdkEngineGuard[engineKey];
