@@ -187,9 +187,6 @@ export class RdsAuroraPostgresEngineRunner extends RdsEngineRunner<AuroraPostgre
 	}
 }
 
-const c = new RdsOracleEngineRunner();
-c.run().then((res) => c.consoleOutputResults(res));
-
 // *****************************************************************************
 // TODO integrate code generation in abstract runner
 // *****************************************************************************

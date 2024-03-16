@@ -1,7 +1,7 @@
+import { Ec2InstancePropeties } from "@app/provider";
 import { DescribeInstanceTypesCommand, EC2Client } from "@aws-sdk/client-ec2";
 import { mockClient } from "aws-sdk-client-mock";
 import "aws-sdk-client-mock-jest";
-import { Ec2InstancePropeties } from "../../../../src/provider/ec2/instanceProperties";
 
 const ec2Mock = mockClient(EC2Client);
 beforeEach(() => {

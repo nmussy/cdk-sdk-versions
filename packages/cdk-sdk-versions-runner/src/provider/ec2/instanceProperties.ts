@@ -3,14 +3,13 @@ import {
 	paginateDescribeInstanceTypes,
 	type InstanceTypeInfo,
 } from "@aws-sdk/client-ec2";
-import { CdkLibPath } from "../../util/cdk";
 
 export class Ec2InstancePropeties {
 	private static readonly client = new EC2Client({});
 
-	private static readonly instanceTypesPath = new CdkLibPath(
+	/* private static readonly instanceTypesPath = new CdkLibPath(
 		"aws-ec2/lib/instance-types.d.ts",
-	);
+	); */
 
 	public async fetchInstanceTypeInfo() {
 		const instanceTypes: InstanceTypeInfo[] = [];
