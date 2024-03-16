@@ -227,10 +227,10 @@ class RdsEngineRunner<
 > extends CdkSdkVersionRunner<EngineVersion, EngineVersion> {
 	private static readonly client = new RDSClient({});
 
-	private static readonly instanceEnginePath = new CdkLibPath(
+	public static readonly instanceEnginePath = new CdkLibPath(
 		"aws-rds/lib/instance-engine.d.ts",
 	);
-	private static readonly clusterEnginePath = new CdkLibPath(
+	public static readonly clusterEnginePath = new CdkLibPath(
 		"aws-rds/lib/cluster-engine.d.ts",
 	);
 
@@ -245,13 +245,15 @@ class RdsEngineRunner<
 		super(`Rds${engineVesionType.name}`);
 	}
 
-	private static fetchSdkEngineVersionPromiseMap: Partial<
-		Record<RdsEngine, Promise<DeprecableEngineVersion<CdkEngineVersion>[]>>
-	> = {};
+	protected static get isCacheEnabled() {
+		return true;
+	}
+
 	private async fetchSdkEngineVersion<EngineVersion extends CdkEngineVersion>(
 		engine: RdsEngine,
 		engiveVersionType: CdkEngineVersionType,
 	): Promise<DeprecableEngineVersion<EngineVersion>[]> {
+		console.trace("call");
 		const versions: DBEngineVersion[] = [];
 		const paginator = paginateDescribeDBEngineVersions(
 			{ client: RdsEngineRunner.client, pageSize: 100 },
@@ -280,10 +282,19 @@ class RdsEngineRunner<
 		);
 	}
 
+	private static fetchSdkEngineVersionPromiseMap: Partial<
+		Record<RdsEngine, Promise<DeprecableEngineVersion<CdkEngineVersion>[]>>
+	> = {};
 	protected async fetchSdkVersions() {
 		const versions = await Promise.all(
 			this.engines.map<Promise<DeprecableEngineVersion<EngineVersion>[]>>(
 				(engine) => {
+					if (!RdsEngineRunner.isCacheEnabled)
+						return this.fetchSdkEngineVersion<EngineVersion>(
+							engine,
+							this.engineVesionType,
+						);
+
 					if (!RdsEngineRunner.fetchSdkEngineVersionPromiseMap[engine]) {
 						RdsEngineRunner.fetchSdkEngineVersionPromiseMap[engine] =
 							this.fetchSdkEngineVersion<EngineVersion>(
@@ -297,12 +308,14 @@ class RdsEngineRunner<
 			),
 		);
 
+		console.log(this.engines, versions);
+
 		return versions.flat();
 	}
 
-	private static _getCDKVersions<T extends CdkEngineVersion = CdkEngineVersion>(
-		filename: string,
-	) {
+	private static async _getCDKVersions<
+		T extends CdkEngineVersion = CdkEngineVersion,
+	>(filename: string) {
 		const engineVersions: DeprecableEngineVersion<T>[] = [];
 
 		for (const { className, fieldName, isDeprecated } of getStaticFieldComments(
@@ -397,11 +410,20 @@ class RdsEngineRunner<
 		>();
 		for (const engine of this.engines) {
 			if (ClusterEngines.includes(engine)) {
-				if (!RdsEngineRunner.fetchCdkClusterEnginePromise) {
-					RdsEngineRunner.fetchCdkClusterEnginePromise = (async () =>
+				if (!RdsEngineRunner.isCacheEnabled) {
+					promises.add(
 						RdsEngineRunner._getCDKVersions<CdkClusterEngineVersion>(
 							RdsEngineRunner.clusterEnginePath.auto,
-						))();
+						) as Promise<DeprecableEngineVersion<EngineVersion>[]>,
+					);
+					continue;
+				}
+
+				if (!RdsEngineRunner.fetchCdkClusterEnginePromise) {
+					RdsEngineRunner.fetchCdkClusterEnginePromise =
+						RdsEngineRunner._getCDKVersions<CdkClusterEngineVersion>(
+							RdsEngineRunner.clusterEnginePath.auto,
+						);
 				}
 
 				promises.add(
@@ -410,11 +432,20 @@ class RdsEngineRunner<
 					>,
 				);
 			} else {
-				if (!RdsEngineRunner.fetchCdkInstanceEnginePromise) {
-					RdsEngineRunner.fetchCdkInstanceEnginePromise = (async () =>
+				if (!RdsEngineRunner.isCacheEnabled) {
+					promises.add(
 						RdsEngineRunner._getCDKVersions<CdkInstanceEngineVersion>(
 							RdsEngineRunner.instanceEnginePath.auto,
-						))();
+						) as Promise<DeprecableEngineVersion<EngineVersion>[]>,
+					);
+					continue;
+				}
+
+				if (!RdsEngineRunner.fetchCdkInstanceEnginePromise) {
+					RdsEngineRunner.fetchCdkInstanceEnginePromise =
+						RdsEngineRunner._getCDKVersions<CdkInstanceEngineVersion>(
+							RdsEngineRunner.instanceEnginePath.auto,
+						);
 				}
 
 				promises.add(

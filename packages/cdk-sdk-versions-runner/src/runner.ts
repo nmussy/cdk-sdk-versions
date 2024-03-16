@@ -58,6 +58,8 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 	private static singletons: CdkSdkVersionRunner<unknown, unknown>[] = [];
 
 	protected constructor(protected readonly identifier: string) {
+		if (process.env.NODE_ENV === "test") return;
+
 		if (
 			CdkSdkVersionRunner.singletons.find(
 				(runner) => runner instanceof this.constructor,

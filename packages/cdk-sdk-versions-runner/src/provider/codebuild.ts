@@ -55,16 +55,16 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 	public static readonly MISSING_IMAGE_NAME = "__MISSING_IMAGE_NAME__";
 
 	private static readonly libPath = "aws-codebuild/lib";
-	private static readonly projectPath = new CdkLibPath(
+	public static readonly projectPath = new CdkLibPath(
 		join(CodeBuildImageRunner.libPath, "project.d.ts"),
 	);
-	private static readonly linuxArmPath = new CdkLibPath(
+	public static readonly linuxArmPath = new CdkLibPath(
 		join(CodeBuildImageRunner.libPath, "linux-arm-build-image.d.ts"),
 	);
-	private static readonly lambdaPath = new CdkLibPath(
+	public static readonly lambdaPath = new CdkLibPath(
 		join(CodeBuildImageRunner.libPath, "linux-lambda-build-image.d.ts"),
 	);
-	private static readonly lambdaArmPath = new CdkLibPath(
+	public static readonly lambdaArmPath = new CdkLibPath(
 		join(CodeBuildImageRunner.libPath, "linux-arm-lambda-build-image.d.ts"),
 	);
 	private static readonly imageBuildPath: {

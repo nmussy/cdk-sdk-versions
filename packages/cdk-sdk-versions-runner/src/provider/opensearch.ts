@@ -13,7 +13,7 @@ export class OpenSearchRunner extends CdkSdkVersionRunner<
 > {
 	private static readonly client = new OpenSearchClient({});
 
-	private static readonly versionPath = new CdkLibPath(
+	public static readonly versionPath = new CdkLibPath(
 		"aws-opensearchservice/lib/version.d.ts",
 	);
 	private static readonly engineVersionConstructorRegex =

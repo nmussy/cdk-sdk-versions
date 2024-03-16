@@ -14,7 +14,7 @@ export class BedrockRunner extends CdkSdkVersionRunner<
 	FoundationModelSummary
 > {
 	private static readonly client = new BedrockClient({});
-	private static readonly foundationModelPath = new CdkLibPath(
+	public static readonly foundationModelPath = new CdkLibPath(
 		"aws-bedrock/lib/foundation-model.d.ts",
 	);
 	private static readonly foundationModelConstructorRegex =

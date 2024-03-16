@@ -4,11 +4,11 @@ import {
 	type ListImagesCommandInput,
 } from "@aws-sdk/client-ecr";
 import { EKSClient } from "@aws-sdk/client-eks";
+import { AlbControllerVersion } from "aws-cdk-lib/aws-eks";
 import type { ReadonlyDeep } from "type-fest";
 import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
 import { CdkLibPath } from "../util/cdk";
 import { getStaticFieldComments } from "../util/tsdoc";
-import { AlbControllerVersion } from "aws-cdk-lib/aws-eks";
 
 export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 	AlbControllerVersion,
@@ -24,7 +24,7 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 		registryId: "602401143452",
 	};
 
-	private static readonly albControllerPath = new CdkLibPath(
+	public static readonly albControllerPath = new CdkLibPath(
 		"aws-eks/lib/alb-controller.ts",
 	);
 

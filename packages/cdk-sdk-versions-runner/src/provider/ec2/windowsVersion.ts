@@ -14,7 +14,7 @@ export class Ec2WindowsVersionRunner extends CdkSdkVersionRunner<
 > {
 	private static readonly client = new EC2Client({});
 
-	private static readonly windowsVersionsPath = new CdkLibPath(
+	public static readonly windowsVersionsPath = new CdkLibPath(
 		"aws-ec2/lib/windows-versions.d.ts",
 	);
 

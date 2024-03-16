@@ -14,7 +14,7 @@ export class SyntheticsRunner extends CdkSdkVersionRunner<
 > {
 	private static readonly client = new SyntheticsClient({});
 
-	private static readonly runtimePath = new CdkLibPath(
+	public static readonly runtimePath = new CdkLibPath(
 		"aws-synthetics/lib/runtime.d.ts",
 	);
 	private static readonly runtimeConstructorRegex =

@@ -7,7 +7,7 @@ import {
 export class Ec2InstancePropeties {
 	private static readonly client = new EC2Client({});
 
-	/* private static readonly instanceTypesPath = new CdkLibPath(
+	/* public static readonly instanceTypesPath = new CdkLibPath(
 		"aws-ec2/lib/instance-types.d.ts",
 	); */
 
