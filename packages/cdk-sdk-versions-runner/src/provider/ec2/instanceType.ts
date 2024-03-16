@@ -18,15 +18,14 @@ class Ec2InstanceTypeRunner<
 		"aws-ec2/lib/instance-types.d.ts",
 	);
 
-	private static readonly ignoredInstanceClasses: Record<string, string> = {
+	public static readonly ignoredInstanceClasses: Record<string, string> = {
 		// Available in the CDK, but not returned by the SDK in us-east-1
 
 		// Memory-intensive instances, 2nd generation with Graviton2 processors (can be used only in RDS)
 		X2G: "x2g",
+		// TODO request access: https://pages.awscloud.com/EC2-P4de-Preview.html
 		// Parallel-processing optimized instances with local NVME drive, extended, 4th generation (in developer preview)
 		P4DE: "p4de",
-		// High performance computing based on AMD EPYC, 6th generation (not available in us-east-1, available in us-east-2)
-		HPC6A: "hpc6a",
 
 		// Available in the SDK, but not in the CDK
 
@@ -41,7 +40,7 @@ class Ec2InstanceTypeRunner<
 		// I/O-optimized instances, 2nd generation (previous generation)
 		I2: "i2",
 	};
-	private static readonly ignoredInstanceClassesKeys = Object.keys(
+	public static readonly ignoredInstanceClassesKeys = Object.keys(
 		Ec2InstanceTypeRunner.ignoredInstanceClasses,
 	);
 
