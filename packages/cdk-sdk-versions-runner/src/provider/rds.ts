@@ -1,6 +1,3 @@
-import { CdkSdkVersionRunner, type DeprecableVersion } from "@app/runner";
-import { CdkLibPath } from "@app/util/cdk";
-import { getStaticFieldComments } from "@app/util/tsdoc";
 import {
 	RDSClient,
 	paginateDescribeDBEngineVersions,
@@ -16,6 +13,9 @@ import {
 	SqlServerEngineVersion,
 } from "aws-cdk-lib/aws-rds";
 import { isEqualWith } from "lodash";
+import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
+import { CdkLibPath } from "../util/cdk";
+import { getStaticFieldComments } from "../util/tsdoc";
 
 export enum RdsEngine {
 	AURORA_MYSQL = "aurora-mysql",

@@ -1,5 +1,7 @@
 const hq = require("alias-hq");
 
+hq.load("./test/tsconfig.json");
+
 module.exports = {
 	transform: {
 		"\\.[jt]sx?$": [
