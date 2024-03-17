@@ -11,7 +11,17 @@ export declare enum InstanceClass {
 	/**
 	 * Standard instances, 3rd generation
 	 */
+	STANDARD3 = "standard3",
+
+	/**
+	 * Standard instances, 3rd generation
+	 */
 	M3 = "m3",
+
+	/**
+	 * Standard instances, 4th generation
+	 */
+	STANDARD4 = "standard4",
 
 	/**
 	 * Standard instances, 4th generation

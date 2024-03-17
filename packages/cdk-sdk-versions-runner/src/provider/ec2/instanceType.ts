@@ -44,6 +44,10 @@ class Ec2InstanceTypeRunner<
 		Ec2InstanceTypeRunner.ignoredInstanceClasses,
 	);
 
+	protected get isCacheEnabled() {
+		return true;
+	}
+
 	constructor(private readonly type: "instanceClass" | "instanceSize") {
 		super(`Ec2${capitalize(type)}`);
 	}
@@ -78,13 +82,17 @@ class Ec2InstanceTypeRunner<
 	}
 
 	protected async fetchSdkVersions() {
-		if (!Ec2InstanceTypeRunner.fetchInstanceTypeInfoPromise) {
+		if (
+			!Ec2InstanceTypeRunner.fetchInstanceTypeInfoPromise &&
+			this.isCacheEnabled
+		) {
 			Ec2InstanceTypeRunner.fetchInstanceTypeInfoPromise =
 				this.fetchInstanceTypeInfo();
 		}
 
-		const instanceTypes =
-			await Ec2InstanceTypeRunner.fetchInstanceTypeInfoPromise;
+		const instanceTypes = await (this.isCacheEnabled
+			? Ec2InstanceTypeRunner.fetchInstanceTypeInfoPromise
+			: this.fetchInstanceTypeInfo());
 
 		const instanceVersions = new Set<T>();
 		for (const instanceType of instanceTypes) {
@@ -161,7 +169,7 @@ class Ec2InstanceTypeRunner<
 		if (this.type === "instanceClass")
 			return Ec2InstanceTypeRunner._getCDKInstanceTypes<T>("InstanceClass");
 		if (this.type === "instanceSize")
-			return Ec2InstanceTypeRunner._getCDKInstanceTypes<T>("InstanceClass");
+			return Ec2InstanceTypeRunner._getCDKInstanceTypes<T>("InstanceSize");
 
 		throw new Error(`Unknown instance type: ${this.type}`);
 	}

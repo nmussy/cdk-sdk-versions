@@ -1,4 +1,9 @@
 import {
+	Ec2InstanceClassRunner,
+	Ec2InstanceSizeRunner,
+	Ec2WindowsVersionRunner,
+} from "@app/provider";
+import {
 	DescribeImagesCommand,
 	DescribeInstanceTypesCommand,
 	EC2Client,
@@ -11,24 +16,44 @@ import {
 import { mockClient } from "aws-sdk-client-mock";
 import "aws-sdk-client-mock-jest";
 import { join } from "node:path";
-import {
-	getInstanceClasses,
-	getInstanceSizes,
-	getInstanceTypeInfo,
-	getWindowsSsmImages,
-} from "../../../src/provider/ec2";
-import {
-	CDK_LIB_INSTANCE_TYPES_PATH,
-	CDK_LIB_WINDOWS_VERSIONS_PATH,
-	getCDKInstanceClasses,
-	getCDKInstanceSizes,
-	getCDKWindowsVersions,
-} from "../../../src/util/provider/ec2";
 
 const ec2Mock = mockClient(EC2Client);
 beforeEach(() => {
 	ec2Mock.reset();
 });
+
+class ProxyEc2WindowsVersionRunner extends Ec2WindowsVersionRunner {
+	public async fetchSdkVersions() {
+		return super.fetchSdkVersions();
+	}
+	public async generateCdkVersions() {
+		return super.generateCdkVersions();
+	}
+}
+
+class ProxyEc2InstanceClassRunner extends Ec2InstanceClassRunner {
+	public get isCacheEnabled() {
+		return false;
+	}
+	public async fetchSdkVersions() {
+		return super.fetchSdkVersions();
+	}
+	public async generateCdkVersions() {
+		return super.generateCdkVersions();
+	}
+}
+
+class ProxyEc2InstanceSizeRunner extends Ec2InstanceSizeRunner {
+	public get isCacheEnabled() {
+		return false;
+	}
+	public async fetchSdkVersions() {
+		return super.fetchSdkVersions();
+	}
+	public async generateCdkVersions() {
+		return super.generateCdkVersions();
+	}
+}
 
 describe("SDK", () => {
 	it("getWindowsSsmImages", async () => {
@@ -39,16 +64,17 @@ describe("SDK", () => {
 			],
 		});
 
-		const images = await getWindowsSsmImages();
+		const runner = new ProxyEc2WindowsVersionRunner();
+		const images = await runner.fetchSdkVersions();
 		expect(ec2Mock).toHaveReceivedCommandTimes(DescribeImagesCommand, 1);
 
 		expect(images).toHaveLength(2);
 
 		const [first, second] = images;
-		expect(first.Name).toMatch(
+		expect(first.version.Name).toMatch(
 			WindowsVersion.WINDOWS_SERVER_2019_ENGLISH_CORE_EKS_OPTIMIZED_1_23,
 		);
-		expect(second.Name).toMatch(
+		expect(second.version.Name).toMatch(
 			WindowsVersion.WINDOWS_SERVER_2012_R2_RTM_ENGLISH_FULL_BASE,
 		);
 	});
@@ -62,16 +88,15 @@ describe("SDK", () => {
 			],
 		});
 
-		const instanceTypes = await getInstanceTypeInfo();
+		const runner = new ProxyEc2InstanceClassRunner();
+		const instanceClasses = await runner.fetchSdkVersions();
 		expect(ec2Mock).toHaveReceivedCommandTimes(DescribeInstanceTypesCommand, 1);
-
-		const instanceClasses = getInstanceClasses(instanceTypes);
 
 		expect(instanceClasses).toHaveLength(2);
 
 		const [first, second] = instanceClasses;
-		expect(first).toMatch(InstanceClass.T2);
-		expect(second).toMatch(InstanceClass.C5A);
+		expect(first.version).toMatch(InstanceClass.T2);
+		expect(second.version).toMatch(InstanceClass.C5A);
 	});
 
 	it("getInstanceSizes", async () => {
@@ -83,60 +108,61 @@ describe("SDK", () => {
 			],
 		});
 
-		const instanceTypes = await getInstanceTypeInfo();
+		const runner = new ProxyEc2InstanceSizeRunner();
+		const instanceSizes = await runner.fetchSdkVersions();
 		expect(ec2Mock).toHaveReceivedCommandTimes(DescribeInstanceTypesCommand, 1);
-
-		const instanceSizes = getInstanceSizes(instanceTypes);
 
 		expect(instanceSizes).toHaveLength(2);
 
 		const [first, second] = instanceSizes;
-		expect(first).toMatch(InstanceSize.MICRO);
-		expect(second).toMatch(InstanceSize.SMALL);
+		expect(first.version).toMatch(InstanceSize.MICRO);
+		expect(second.version).toMatch(InstanceSize.SMALL);
 	});
 });
 
 describe("CDK", () => {
 	describe("getCDKWindowsVersions", () => {
-		it("should extract getCDKWindowsVersions from .ts", () => {
+		it("should extract getCDKWindowsVersions from .ts", async () => {
 			const spy = jest
-				.spyOn(CDK_LIB_WINDOWS_VERSIONS_PATH, "auto", "get")
+				.spyOn(ProxyEc2WindowsVersionRunner.windowsVersionsPath, "auto", "get")
 				.mockReturnValue(join(__dirname, "./mocked-windows-versions.ts"));
 
-			const cdkWindowsImages = getCDKWindowsVersions();
+			const runner = new ProxyEc2WindowsVersionRunner();
+			const cdkWindowsImages = await runner.generateCdkVersions();
 			expect(spy).toHaveBeenCalled();
 
 			expect(cdkWindowsImages).toHaveLength(2);
 
 			const [first, second] = cdkWindowsImages;
-			expect(first.windowsVersion).toBe(
+			expect(first.version).toBe(
 				WindowsVersion.WINDOWS_SERVER_2012_R2_RTM_PORTUGUESE_PORTUGAL_64BIT_BASE,
 			);
 			expect(first.isDeprecated).toBe(false);
 
-			expect(second.windowsVersion).toBe(
+			expect(second.version).toBe(
 				"Windows_Server-2012-R2_RTM-Portugese_Portugal-64Bit-Base",
 			);
 			expect(second.isDeprecated).toBe(true);
 		});
 
-		it("should extract getCDKWindowsVersions from .d.ts", () => {
+		it("should extract getCDKWindowsVersions from .d.ts", async () => {
 			const spy = jest
-				.spyOn(CDK_LIB_WINDOWS_VERSIONS_PATH, "auto", "get")
+				.spyOn(ProxyEc2WindowsVersionRunner.windowsVersionsPath, "auto", "get")
 				.mockReturnValue(join(__dirname, "./mocked-windows-versions.d.ts"));
 
-			const cdkWindowsImages = getCDKWindowsVersions();
+			const runner = new ProxyEc2WindowsVersionRunner();
+			const cdkWindowsImages = await runner.generateCdkVersions();
 			expect(spy).toHaveBeenCalled();
 
 			expect(cdkWindowsImages).toHaveLength(2);
 
 			const [first, second] = cdkWindowsImages;
-			expect(first.windowsVersion).toBe(
+			expect(first.version).toBe(
 				WindowsVersion.WINDOWS_SERVER_2012_R2_RTM_PORTUGUESE_PORTUGAL_64BIT_BASE,
 			);
 			expect(first.isDeprecated).toBe(false);
 
-			expect(second.windowsVersion).toBe(
+			expect(second.version).toBe(
 				"Windows_Server-2012-R2_RTM-Portugese_Portugal-64Bit-Base",
 			);
 			expect(second.isDeprecated).toBe(true);
@@ -144,66 +170,70 @@ describe("CDK", () => {
 	});
 
 	describe("getCDKInstanceClasses", () => {
-		it("should extract getCDKInstanceClasses from .ts", () => {
+		it("should extract getCDKInstanceClasses from .ts", async () => {
 			const spy = jest
-				.spyOn(CDK_LIB_INSTANCE_TYPES_PATH, "auto", "get")
+				.spyOn(ProxyEc2InstanceClassRunner.instanceTypesPath, "auto", "get")
 				.mockReturnValue(join(__dirname, "./mocked-instance-types.ts"));
 
-			const cdkInstanceClasses = getCDKInstanceClasses();
+			const runner = new ProxyEc2InstanceClassRunner();
+			const cdkInstanceClasses = await runner.generateCdkVersions();
 			expect(spy).toHaveBeenCalled();
 
 			expect(cdkInstanceClasses).toHaveLength(2);
 
 			const [first, second] = cdkInstanceClasses;
-			expect(first).toBe(InstanceClass.M3);
-			expect(second).toBe(InstanceClass.M4);
+			expect(first.version).toBe(InstanceClass.M3);
+			expect(second.version).toBe(InstanceClass.M4);
 		});
 
-		it("should extract getCDKInstanceClasses from .d.ts", () => {
+		it("should extract getCDKInstanceClasses from .d.ts", async () => {
 			const spy = jest
-				.spyOn(CDK_LIB_INSTANCE_TYPES_PATH, "auto", "get")
+				.spyOn(ProxyEc2InstanceClassRunner.instanceTypesPath, "auto", "get")
 				.mockReturnValue(join(__dirname, "./mocked-instance-types.d.ts"));
 
-			const cdkInstanceClasses = getCDKInstanceClasses();
+			const runner = new ProxyEc2InstanceClassRunner();
+			const cdkInstanceClasses = await runner.generateCdkVersions();
 			expect(spy).toHaveBeenCalled();
 
 			expect(cdkInstanceClasses).toHaveLength(2);
 
 			const [first, second] = cdkInstanceClasses;
-			expect(first).toBe(InstanceClass.M3);
-			expect(second).toBe(InstanceClass.M4);
+			expect(first.version).toBe(InstanceClass.M3);
+			expect(second.version).toBe(InstanceClass.M4);
 		});
 	});
 
 	describe("getCDKInstanceSizes", () => {
-		it("should extract getCDKInstanceSizes from .ts", () => {
+		it("should extract getCDKInstanceSizes from .ts", async () => {
 			const spy = jest
-				.spyOn(CDK_LIB_INSTANCE_TYPES_PATH, "auto", "get")
+				.spyOn(ProxyEc2InstanceSizeRunner.instanceTypesPath, "auto", "get")
 				.mockReturnValue(join(__dirname, "./mocked-instance-types.ts"));
 
-			const cdkInstanceSizes = getCDKInstanceSizes();
+			const runner = new ProxyEc2InstanceSizeRunner();
+			const cdkInstanceSizes = await runner.generateCdkVersions();
 			expect(spy).toHaveBeenCalled();
 
 			expect(cdkInstanceSizes).toHaveLength(2);
 
 			const [first, second] = cdkInstanceSizes;
-			expect(first).toBe(InstanceSize.NANO);
-			expect(second).toBe(InstanceSize.MICRO);
+			expect(first.version).toBe(InstanceSize.NANO);
+			expect(second.version).toBe(InstanceSize.MICRO);
 		});
 
-		it("should extract getCDKInstanceSizes from .d.ts", () => {
+		it("should extract getCDKInstanceSizes from .d.ts", async () => {
 			const spy = jest
-				.spyOn(CDK_LIB_INSTANCE_TYPES_PATH, "auto", "get")
+				.spyOn(ProxyEc2InstanceSizeRunner.instanceTypesPath, "auto", "get")
 				.mockReturnValue(join(__dirname, "./mocked-instance-types.d.ts"));
 
-			const cdkInstanceSizes = getCDKInstanceSizes();
+			const runner = new ProxyEc2InstanceSizeRunner();
+			const cdkInstanceSizes = await runner.generateCdkVersions();
 			expect(spy).toHaveBeenCalled();
 
 			expect(cdkInstanceSizes).toHaveLength(2);
 
 			const [first, second] = cdkInstanceSizes;
-			expect(first).toBe(InstanceSize.NANO);
-			expect(second).toBe(InstanceSize.MICRO);
+			expect(first.version).toBe(InstanceSize.NANO);
+			expect(second.version).toBe(InstanceSize.MICRO);
 		});
 	});
 });
