@@ -253,7 +253,6 @@ class RdsEngineRunner<
 		engine: RdsEngine,
 		engiveVersionType: CdkEngineVersionType,
 	): Promise<DeprecableEngineVersion<EngineVersion>[]> {
-		console.trace("call");
 		const versions: DBEngineVersion[] = [];
 		const paginator = paginateDescribeDBEngineVersions(
 			{ client: RdsEngineRunner.client, pageSize: 100 },
