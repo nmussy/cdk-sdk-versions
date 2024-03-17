@@ -10,6 +10,7 @@
     "inlineSources": true,
     "esModuleInterop": true,
     "composite": true,
+    "rootDir": "./src",
     "baseUrl": ".",
     "paths": {
       "@app/*": ["./src/*"]
