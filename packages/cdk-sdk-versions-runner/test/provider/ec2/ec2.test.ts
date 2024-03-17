@@ -8,6 +8,7 @@ import {
 	DescribeInstanceTypesCommand,
 	EC2Client,
 } from "@aws-sdk/client-ec2";
+import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import {
 	InstanceClass,
 	InstanceSize,
