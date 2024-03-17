@@ -18,12 +18,14 @@
 	},
 	"dependencies": {
 		"cdk-sdk-versions-runner": "workspace:^",
+		"cli-spinner": "^0.2.10",
 		"lodash": "^4.17.21",
 		"yargs": "^17.7.2"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.6.1",
 		"@jest/globals": "^29.7.0",
+		"@types/cli-spinner": "^0.2.3",
 		"@types/lodash": "^4.17.0",
 		"@types/node": "^20.11.28",
 		"@types/yargs": "^17.0.32",
