@@ -1,6 +1,7 @@
 {
   "name": "cdk-sdk-versions",
   "packageManager": "yarn@4.1.1",
+  "version": "0.1.0",
   "workspaces": [
     "packages/*"
   ],

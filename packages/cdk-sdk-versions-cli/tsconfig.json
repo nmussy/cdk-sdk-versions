@@ -10,11 +10,12 @@
     "inlineSources": true,
     "esModuleInterop": true,
     "composite": true,
+    "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
       "@app/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "package.json"],
   "exclude": ["node_modules"]
 }
