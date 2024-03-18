@@ -3438,26 +3438,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aws-sdk-client-mock-jest@npm:3.1.0-beta.1":
-  version: 3.1.0-beta.1
-  resolution: "aws-sdk-client-mock-jest@npm:3.1.0-beta.1"
+"aws-sdk-client-mock-jest@npm:4.0.0":
+  version: 4.0.0
+  resolution: "aws-sdk-client-mock-jest@npm:4.0.0"
   dependencies:
     expect: "npm:>28.1.3"
     tslib: "npm:^2.1.0"
   peerDependencies:
-    aws-sdk-client-mock: 3.1.0-beta.1
-  checksum: 10c0/c680dad1eb8b15af8b7407a4010f11a2d389f39f29e50805c333f40bdad471e8cc9cf3fe42105c53854b99b0e06289591e5bcfd9b42ef2fc4afe6218c8276dea
+    aws-sdk-client-mock: 4.0.0
+  checksum: 10c0/fac0ff3e5d6c6044727cf72ded29db3eb0e40bf92877a1ed83c60dac3b7fb1322cdf8a4775b2475bc661aad847f3b36db331c9f52da1e2e5680b79d1f848f68c
   languageName: node
   linkType: hard
 
-"aws-sdk-client-mock@npm:3.1.0-beta.1":
-  version: 3.1.0-beta.1
-  resolution: "aws-sdk-client-mock@npm:3.1.0-beta.1"
+"aws-sdk-client-mock@npm:4.0.0":
+  version: 4.0.0
+  resolution: "aws-sdk-client-mock@npm:4.0.0"
   dependencies:
     "@types/sinon": "npm:^10.0.10"
     sinon: "npm:^16.1.3"
     tslib: "npm:^2.1.0"
-  checksum: 10c0/4833fe30c296a4783693dd3eafce0b1b6ded4f0dd1ad01502e55796c589a0a72d76a9e11751822262433557b040bec07f7dc65d32393ea05c8351239822db923
+  checksum: 10c0/4ba843b10564f5698e22fecf1a64c4e58b19b01f1444798db8cd6c19293409e63984cbf559ee96f731c49653806562e1e6217f259522c6408983bc1a66c66958
   languageName: node
   linkType: hard
 
@@ -3785,8 +3785,8 @@ __metadata:
     "@types/node": "npm:^20.11.28"
     "@types/yargs": "npm:^17.0.32"
     alias-hq: "npm:^6.2.3"
-    aws-sdk-client-mock: "npm:3.1.0-beta.1"
-    aws-sdk-client-mock-jest: "npm:3.1.0-beta.1"
+    aws-sdk-client-mock: "npm:4.0.0"
+    aws-sdk-client-mock-jest: "npm:4.0.0"
     cdk-sdk-versions-runner: "workspace:^"
     cli-spinner: "npm:^0.2.10"
     esbuild: "npm:^0.20.2"
@@ -3827,8 +3827,8 @@ __metadata:
     "@types/node": "npm:^20.11.28"
     alias-hq: "npm:^6.2.3"
     aws-cdk-lib: "npm:^2.133.0"
-    aws-sdk-client-mock: "npm:3.1.0-beta.1"
-    aws-sdk-client-mock-jest: "npm:3.1.0-beta.1"
+    aws-sdk-client-mock: "npm:4.0.0"
+    aws-sdk-client-mock-jest: "npm:4.0.0"
     chalk: "npm:^4.1.2"
     constructs: "npm:^10.3.0"
     esbuild: "npm:^0.20.2"
