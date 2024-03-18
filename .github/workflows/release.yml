@@ -1,11 +1,9 @@
 name: Release
 
 on:
-  workflow_dispatch:
-#on:
-#  push:
-#    tags:
-#      - "v*.*.*"
+  push:
+    tags:
+      - "v*.*.*"
 
 jobs:
   build:
