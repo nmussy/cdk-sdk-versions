@@ -5,13 +5,13 @@
 ### Supported
 
 - RDS
-  * [`PostgresEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.PostgresEngineVersion.html)
-  - [`MysqlEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.MysqlEngineVersion.html)
-  - [`MariaDbEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.MariaDbEngineVersion.html)
-  - [`OracleEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.OracleEngineVersion.html)
-  - [`SqlServerEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.SqlServerEngineVersion.html)
-  - [`AuroraMysqlEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.AuroraMysqlEngineVersion.html)
-  - [`AuroraPostgresEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.AuroraPostgresEngineVersion.html)
+  - [`PostgresEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.PostgresEngineVersion.html)
+  * [`MysqlEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.MysqlEngineVersion.html)
+  * [`MariaDbEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.MariaDbEngineVersion.html)
+  * [`OracleEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.OracleEngineVersion.html)
+  * [`SqlServerEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.SqlServerEngineVersion.html)
+  * [`AuroraMysqlEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.AuroraMysqlEngineVersion.html)
+  * [`AuroraPostgresEngineVersion`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_rds.AuroraPostgresEngineVersion.html)
 - CodeBuild
   - [`WindowsBuildImage`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_codebuild.WindowsBuildImage.html)
   - [`LinuxBuildImage`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_codebuild.LinuxBuildImage.html)
@@ -34,6 +34,7 @@
 ### Upcoming support
 
 - EC2
+  - [`InterfaceVpcEndpointAwsService`](https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_ec2.InterfaceVpcEndpointAwsService.html), using [DescribeVpcEndpointServices](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeVpcEndpointServices.html)
   - Instance properties, see [aws-cdk#12022](https://github.com/aws/aws-cdk/issues/12022)
 
 ### Unsupported due to lack of API support
