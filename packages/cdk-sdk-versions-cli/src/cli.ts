@@ -62,12 +62,14 @@ enum Command {
 
 enum Option {
 	RUNNNER = "runner",
+	ONE_LINE = "one-line",
 }
 
 interface YargsResult {
 	$0: "cdk-sdk-versions";
 	_: Command[];
-	runner: string;
+	[Option.RUNNNER]: string;
+	[Option.ONE_LINE]: boolean;
 }
 
 const cli = yargs(process.argv.slice(2))
@@ -91,6 +93,11 @@ cli.command(`${Command.RUN} [${Option.RUNNNER}]`, "Run a runner", (yargs) => {
 			describe: "Runner",
 			choices: [ALL_RUNNERS, ...runnerKeys],
 		})
+		.option(Option.ONE_LINE, {
+			type: "boolean",
+			default: false,
+			describe: "Output results in a single line",
+		})
 		.array(Option.RUNNNER);
 });
 
@@ -100,6 +107,8 @@ if (!argv._.includes(Command.RUN)) {
 }
 
 const run = async (argv: YargsResult) => {
+	const oneLine = argv[Option.ONE_LINE];
+
 	const selectedRunnerKeys =
 		argv[Option.RUNNNER] === ALL_RUNNERS
 			? runnerKeys
@@ -126,7 +135,7 @@ const run = async (argv: YargsResult) => {
 
 				spinner.stop(true);
 				console.log(`${runnerClass.name} results:\n`);
-				runner.consoleOutputResults(results);
+				runner.consoleOutputResults(results, { oneLine });
 				console.log("\n");
 			} catch (error) {
 				spinner.stop(true);
