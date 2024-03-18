@@ -3,7 +3,11 @@ import {
 	EC2Client,
 } from "@aws-sdk/client-ec2";
 import { InterfaceVpcEndpointAwsService } from "aws-cdk-lib/aws-ec2";
-import { CdkSdkVersionRunner, type DeprecableVersion } from "../../runner";
+import {
+	CdkSdkVersionRunner,
+	VersionStorageType,
+	type DeprecableVersion,
+} from "../../runner";
 import { CdkLibPath } from "../../util/cdk";
 import { getStaticFieldComments } from "../../util/tsdoc";
 
@@ -18,7 +22,10 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 	);
 
 	constructor() {
-		super("Ec2VpcEndpoints");
+		super("Ec2VpcEndpoints", {
+			storageType: VersionStorageType.ClassWithStaticMembers,
+			className: "InterfaceVpcEndpointAwsService",
+		});
 	}
 
 	protected async generateCdkVersions() {
@@ -57,16 +64,14 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 
 		let nextToken: string | undefined;
 		do {
-			const {
-				ServiceDetails,
-				ServiceNames = [],
-				NextToken,
-			} = await Ec2VpcEndpointRunner.client.send(
-				new DescribeVpcEndpointServicesCommand({
-					MaxResults: 100,
-					NextToken: nextToken,
-				}),
-			);
+			const { ServiceNames = [], NextToken } =
+				await Ec2VpcEndpointRunner.client.send(
+					new DescribeVpcEndpointServicesCommand({
+						MaxResults: 100,
+						NextToken: nextToken,
+					}),
+				);
+
 			nextToken = NextToken;
 
 			for (const serviceName of ServiceNames) {

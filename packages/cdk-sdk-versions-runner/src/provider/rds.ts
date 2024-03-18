@@ -13,7 +13,11 @@ import {
 	SqlServerEngineVersion,
 } from "aws-cdk-lib/aws-rds";
 import { isEqualWith } from "lodash";
-import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
+import {
+	CdkSdkVersionRunner,
+	VersionStorageType,
+	type DeprecableVersion,
+} from "../runner";
 import { CdkLibPath } from "../util/cdk";
 import { getStaticFieldComments } from "../util/tsdoc";
 
@@ -242,7 +246,11 @@ class RdsEngineRunner<
 		protected readonly engineVesionType: CdkEngineVersionType,
 		private readonly engines: RdsEngine[],
 	) {
-		super(`Rds${engineVesionType.name}`);
+		super(`Rds${engineVesionType.name}`, {
+			storageType: VersionStorageType.ClassWithStaticMembers,
+			className: engineVesionType.name,
+			factoryMethod: "of",
+		});
 	}
 
 	protected static get isCacheEnabled() {

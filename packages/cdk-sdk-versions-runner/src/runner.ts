@@ -1,4 +1,4 @@
-import type { Entries, RequireExactlyOne } from "type-fest";
+import type { Entries, RequireAtLeastOne, RequireExactlyOne } from "type-fest";
 import { CONSOLE_SYMBOLS } from "./util";
 
 export interface DeprecableVersion<T> {
@@ -30,11 +30,14 @@ const runnerActionConsoleTaggedTemplate: {
 
 const ignoredActions: RunnerActions[] = [RunnerActions.ADD_AS_DEPRECATED];
 
-type RunnerResult<TCdk, TSdk> = {
-	result: string;
-	cdkVersion?: TCdk;
-	sdkVersion?: TSdk;
-};
+type RunnerResult<TCdk, TSdk> = RequireAtLeastOne<
+	{
+		result: string;
+		cdkVersion?: TCdk;
+		sdkVersion?: TSdk;
+	},
+	"cdkVersion" | "sdkVersion"
+>;
 
 type RunnerResults<TCdk, TSdk> = {
 	[action in RunnerActions]: RunnerResult<TCdk, TSdk>[];
@@ -51,13 +54,46 @@ const generateEmptyRunnerResults = <TCdk, TSdk>(): RunnerResults<
 	[RunnerActions.REMOVE]: [],
 });
 
+export enum VersionStorageType {
+	ClassWithStaticMembers = "ClassWithStaticMembers",
+	Enum = "Enum",
+}
+
+export interface BaseCodeGenerationConfiguration {
+	storageType: VersionStorageType;
+}
+
+export interface ClassCodeGenerationConfiguration
+	extends BaseCodeGenerationConfiguration {
+	storageType: VersionStorageType.ClassWithStaticMembers;
+	className: string;
+	factoryMethod?: string;
+}
+
+export interface EnumCodeGenerationConfiguration
+	extends BaseCodeGenerationConfiguration {
+	storageType: VersionStorageType.Enum;
+	enumName: string;
+}
+
+export type CodeGenerationConfiguration =
+	| ClassCodeGenerationConfiguration
+	| EnumCodeGenerationConfiguration;
+
+export interface ConsoleOutputOptions {
+	oneLine?: boolean;
+}
+
 export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 	// Prevent performing needless SDK requests/TypeScript parsing
 	// by preventing multiple instances of the same runner
 	// Each runner is then responsible for its own caching scheme
 	private static singletons: CdkSdkVersionRunner<unknown, unknown>[] = [];
 
-	protected constructor(protected readonly identifier: string) {
+	protected constructor(
+		protected readonly identifier: string,
+		protected readonly codeGenerationConfiguration: CodeGenerationConfiguration,
+	) {
 		if (process.env.NODE_ENV === "test") return;
 
 		if (
@@ -138,7 +174,38 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 		return runnerResults;
 	}
 
-	public consoleOutputResults(runnerResults: RunnerResults<TCdk, TSdk>) {
+	protected generateCodeResultFromCdkVersion(
+		result: RunnerResult<TCdk, TSdk>,
+	): string {
+		if (!result.cdkVersion && !result.sdkVersion) throw new Error("never");
+
+		const versionValue = result.cdkVersion
+			? this.getCdkVersionId(result.cdkVersion as TCdk)
+			: this.getSdkVersionId(result.sdkVersion as TSdk);
+
+		const { storageType } = this.codeGenerationConfiguration;
+		if (storageType === VersionStorageType.ClassWithStaticMembers) {
+			const { className, factoryMethod } = this.codeGenerationConfiguration;
+
+			if (!factoryMethod) return `new ${className}('${versionValue}');`;
+
+			return `${className}.${factoryMethod}('${versionValue}');`;
+		}
+
+		if (storageType === VersionStorageType.Enum) {
+			// const { enumName } = this.codeGenerationConfiguration;
+			return `${versionValue
+				.toLocaleUpperCase()
+				.replace(/[-.]/g, "_")} = '${versionValue}',`;
+		}
+
+		throw new Error("not implemented");
+	}
+
+	public consoleOutputResults(
+		runnerResults: RunnerResults<TCdk, TSdk>,
+		{ oneLine = false }: ConsoleOutputOptions = {},
+	) {
 		for (const [action, results] of Object.entries(runnerResults) as Entries<
 			RunnerResults<TCdk, TSdk>
 		>) {
@@ -146,9 +213,12 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 
 			results
 				.sort(({ result: a }, { result: b }) => a.localeCompare(b))
-				.map(({ result }) =>
-					console.log(runnerActionConsoleTaggedTemplate[action](result)),
-				);
+				.map((result) => {
+					console.log(runnerActionConsoleTaggedTemplate[action](result.result));
+					if (oneLine) return;
+
+					console.log(this.generateCodeResultFromCdkVersion(result));
+				});
 		}
 	}
 }

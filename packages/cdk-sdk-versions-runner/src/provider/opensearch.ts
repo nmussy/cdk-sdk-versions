@@ -3,7 +3,11 @@ import {
 	paginateListVersions,
 } from "@aws-sdk/client-opensearch";
 import { EngineVersion } from "aws-cdk-lib/aws-opensearchservice";
-import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
+import {
+	CdkSdkVersionRunner,
+	VersionStorageType,
+	type DeprecableVersion,
+} from "../runner";
 import { CdkLibPath } from "../util/cdk";
 import { getStaticFieldComments } from "../util/tsdoc";
 
@@ -20,7 +24,12 @@ export class OpenSearchRunner extends CdkSdkVersionRunner<
 		/EngineVersion.(?<engineName>\w+)\('(?<versionName>[\w.-]+)'\)/;
 
 	constructor() {
-		super("OpenSearch");
+		super("OpenSearch", {
+			storageType: VersionStorageType.ClassWithStaticMembers,
+			className: "EngineVersion",
+			// FIXME
+			factoryMethod: '"openSearch" | "elasticsearch"',
+		});
 	}
 
 	protected async generateCdkVersions() {

@@ -4,7 +4,11 @@ import {
 	type Image,
 } from "@aws-sdk/client-ec2";
 import { WindowsVersion } from "aws-cdk-lib/aws-ec2";
-import { CdkSdkVersionRunner, type DeprecableVersion } from "../../runner";
+import {
+	CdkSdkVersionRunner,
+	VersionStorageType,
+	type DeprecableVersion,
+} from "../../runner";
 import { CdkLibPath } from "../../util/cdk";
 import { getEnumValuesComments } from "../../util/tsdoc";
 
@@ -21,7 +25,10 @@ export class Ec2WindowsVersionRunner extends CdkSdkVersionRunner<
 	public static readonly __MISSING_IMAGE_NAME__ = "__MISSING_IMAGE_NAME__";
 
 	constructor() {
-		super("Ec2WindowsImages");
+		super("Ec2WindowsImages", {
+			storageType: VersionStorageType.Enum,
+			enumName: "WindowsVersion",
+		});
 	}
 
 	protected async generateCdkVersions() {

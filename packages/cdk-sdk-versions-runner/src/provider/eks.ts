@@ -6,7 +6,11 @@ import {
 import { EKSClient } from "@aws-sdk/client-eks";
 import { AlbControllerVersion } from "aws-cdk-lib/aws-eks";
 import type { ReadonlyDeep } from "type-fest";
-import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
+import {
+	CdkSdkVersionRunner,
+	VersionStorageType,
+	type DeprecableVersion,
+} from "../runner";
 import { CdkLibPath } from "../util/cdk";
 import { getStaticFieldComments } from "../util/tsdoc";
 
@@ -37,7 +41,12 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 	public static readonly __MISSING_IMAGE_TAG__ = "__MISSING_IMAGE_TAG__";
 
 	constructor() {
-		super("EksAlbController");
+		super("EksAlbController", {
+			storageType: VersionStorageType.ClassWithStaticMembers,
+			className: "AlbControllerVersion",
+			factoryMethod: "of",
+			// TODO add callback to get helmVersion?
+		});
 	}
 
 	protected async generateCdkVersions() {
@@ -68,7 +77,7 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 					groups: { versionName, helmVersion },
 				} = match;
 				console.warn(
-					`Unknown version: ${fieldName}, replacing with new AlbControllerVersion.of("${versionName}", "${helmVersion}")`,
+					`Unknown version: ${fieldName}, replacing with AlbControllerVersion.of("${versionName}", "${helmVersion}")`,
 				);
 				version = AlbControllerVersion.of(versionName, helmVersion);
 			}

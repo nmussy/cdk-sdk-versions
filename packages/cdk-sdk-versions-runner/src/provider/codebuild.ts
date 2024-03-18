@@ -15,7 +15,11 @@ import {
 import { groupBy, mapValues } from "lodash";
 import { join } from "node:path";
 import type { Entries } from "type-fest";
-import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
+import {
+	CdkSdkVersionRunner,
+	VersionStorageType,
+	type DeprecableVersion,
+} from "../runner";
 import { CdkLibPath, type CdkPath } from "../util/cdk";
 import { getStaticFieldComments, type IStaticField } from "../util/tsdoc";
 
@@ -100,7 +104,10 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 		/^\s*imageId: '(?<imageId>[\w\/.:-]+)'/m;
 
 	constructor(protected readonly imageClassName: BuildImageClass) {
-		super(`CodeBuild${imageClassName}`);
+		super(`CodeBuild${imageClassName}`, {
+			storageType: VersionStorageType.ClassWithStaticMembers,
+			className: imageClassName,
+		});
 	}
 
 	private static getFlatImageIds(languages: EnvironmentLanguage[]) {

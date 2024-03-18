@@ -5,7 +5,7 @@ import {
 } from "@aws-sdk/client-ec2";
 import { InstanceClass, InstanceSize } from "aws-cdk-lib/aws-ec2";
 import { capitalize } from "lodash";
-import { CdkSdkVersionRunner } from "../../runner";
+import { CdkSdkVersionRunner, VersionStorageType } from "../../runner";
 import { CdkLibPath } from "../../util/cdk";
 import { getEnumValuesComments } from "../../util/tsdoc";
 
@@ -49,7 +49,11 @@ class Ec2InstanceTypeRunner<
 	}
 
 	constructor(private readonly type: "instanceClass" | "instanceSize") {
-		super(`Ec2${capitalize(type)}`);
+		const capitalizedType = capitalize(type);
+		super(`Ec2${capitalizedType}`, {
+			storageType: VersionStorageType.Enum,
+			enumName: capitalizedType,
+		});
 	}
 
 	protected static fetchInstanceTypeInfoPromise: Promise<InstanceTypeInfo[]>;

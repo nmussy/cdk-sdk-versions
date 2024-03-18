@@ -4,7 +4,11 @@ import {
 	type RuntimeVersion,
 } from "@aws-sdk/client-synthetics";
 import { Runtime, RuntimeFamily } from "aws-cdk-lib/aws-synthetics";
-import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
+import {
+	CdkSdkVersionRunner,
+	VersionStorageType,
+	type DeprecableVersion,
+} from "../runner";
 import { CdkLibPath } from "../util/cdk";
 import { getStaticFieldComments } from "../util/tsdoc";
 
@@ -23,7 +27,11 @@ export class SyntheticsRunner extends CdkSdkVersionRunner<
 	public static readonly __MISSING_VERSION_NAME__ = "__MISSING_VERSION_NAME__";
 
 	constructor() {
-		super("Synthetics");
+		super("Synthetics", {
+			storageType: VersionStorageType.ClassWithStaticMembers,
+			className: "Runtime",
+			// TODO add RuntimeFamily.${runtimeFamily}
+		});
 	}
 
 	protected async generateCdkVersions() {

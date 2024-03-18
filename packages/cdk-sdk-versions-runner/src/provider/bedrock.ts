@@ -5,7 +5,11 @@ import {
 	type FoundationModelSummary,
 } from "@aws-sdk/client-bedrock";
 import { FoundationModelIdentifier } from "aws-cdk-lib/aws-bedrock";
-import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
+import {
+	CdkSdkVersionRunner,
+	VersionStorageType,
+	type DeprecableVersion,
+} from "../runner";
 import { CdkLibPath } from "../util/cdk";
 import { getStaticFieldComments } from "../util/tsdoc";
 
@@ -23,7 +27,10 @@ export class BedrockRunner extends CdkSdkVersionRunner<
 	public static readonly __MISSING_MODEL_ID__ = "__MISSING_MODEL_ID__";
 
 	constructor() {
-		super("Bedrock");
+		super("Bedrock", {
+			storageType: VersionStorageType.ClassWithStaticMembers,
+			className: "FoundationModelIdentifier",
+		});
 	}
 
 	protected async generateCdkVersions() {

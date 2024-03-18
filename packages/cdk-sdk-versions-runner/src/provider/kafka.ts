@@ -8,7 +8,11 @@ import {
 	paginateListKafkaVersions,
 	type KafkaVersion as SDKKafkaVersion,
 } from "@aws-sdk/client-kafka";
-import { CdkSdkVersionRunner, type DeprecableVersion } from "../runner";
+import {
+	CdkSdkVersionRunner,
+	VersionStorageType,
+	type DeprecableVersion,
+} from "../runner";
 import { CdkModulePath } from "../util/cdk";
 import { getStaticFieldComments } from "../util/tsdoc";
 
@@ -29,7 +33,11 @@ export class KafkaRunner extends CdkSdkVersionRunner<
 	public static readonly __MISSING_VERSION__ = "__MISSING_VERSION__";
 
 	constructor() {
-		super("Kafka");
+		super("Kafka", {
+			storageType: VersionStorageType.ClassWithStaticMembers,
+			className: "KafkaVersion",
+			factoryMethod: "of",
+		});
 	}
 
 	protected async generateCdkVersions() {
