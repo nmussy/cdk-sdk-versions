@@ -13,10 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      # with .nvmrc Node version
-      - uses: dcodeIO/setup-node-nvm@master
 
-      - run: corepack enable
+      # Read node version from `.nvmrc` file, and pass it to setup-node
+      - id: nvmrc
+        uses: browniebroke/read-nvmrc-action@v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "${{ steps.nvmrc.outputs.node_version }}"
+
       - run: yarn install --immutable
       - run: yarn workspaces foreach -Rpt --from '*-cli' run build
 
