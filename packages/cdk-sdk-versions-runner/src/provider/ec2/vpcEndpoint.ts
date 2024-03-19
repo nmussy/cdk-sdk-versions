@@ -18,9 +18,19 @@ type VpcEndpointType =
 	| InterfaceVpcEndpointAwsService
 	| GatewayVpcEndpointAwsService;
 
+const isInterfaceVpcEndpointAwsService = (
+	endpoint: VpcEndpointType,
+): endpoint is InterfaceVpcEndpointAwsService =>
+	!!(endpoint as InterfaceVpcEndpointAwsService).shortName;
+
+interface SdkVpcEndpoint {
+	service: string;
+	prefix?: string;
+}
+
 export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 	VpcEndpointType,
-	string
+	SdkVpcEndpoint
 > {
 	private static readonly client = new EC2Client({});
 
@@ -28,11 +38,17 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 		"aws-ec2/lib/vpc-endpoint.d.ts",
 	);
 
-	private static readonly vpcEndpointPrefix = /^com\.amazonaws\.[a-z\d-]+\./;
+	private static readonly defaultVpcEndpointPrefix =
+		/^com\.amazonaws\.(\w+-\w+-\d+|\${Token\[(AWS\.Region|TOKEN)\.\d+\]})./;
+	private static readonly prefixVpcEndpointPrefix =
+		/^^(?<prefix>[\w.]+)\.(\w+-\w+-\d+|\${Token\[(AWS\.Region|TOKEN)\.\d+\]})\.(?<service>[\w.-]+)/;
+	private static readonly globalPrefixVpcEndpointPrefix =
+		/^(?<prefix>com\.amazonaws)\.(?<service>[\w.-]+)/;
+
 	private static readonly interfaceVpcEndpointConstructorRegex =
-		/new InterfaceVpcEndpointAwsService\('(?<vpcEndpoint>[\w.:-]+)'\)/;
+		/new InterfaceVpcEndpointAwsService\('(?<service>[\w.:-]+)'(, '(?<prefix>[\w.:-]+)')?\);/;
 	private static readonly gatewayVpcEndpointConstructorRegex =
-		/new GatewayVpcEndpointAwsService\('(?<vpcEndpoint>[\w.:-]+)'\)/;
+		/new GatewayVpcEndpointAwsService\('(?<service>[\w.:-]+)'(, '(?<prefix>[\w.:-]+)')?\);/;
 
 	constructor() {
 		super("Ec2VpcEndpoints", {
@@ -85,12 +101,12 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 				}
 				if (!match?.groups) throw new Error(`Unknown modelId: ${fieldValue}`);
 				const {
-					groups: { vpcEndpoint },
+					groups: { service, prefix },
 				} = match;
 				/* console.warn(
-					`Unknown version: ${fieldName}, replacing with new ${classInit.name}("${vpcEndpoint}")`,
+					`Unknown version: ${fieldName}, replacing with new ${classInit.name}("${service}", "${prefix}")`,
 				); */
-				version = new classInit(vpcEndpoint);
+				version = new classInit(service, prefix);
 			}
 
 			VpcEndpoints.push({ version, isDeprecated });
@@ -99,9 +115,50 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 		return VpcEndpoints;
 	}
 
-	protected async fetchSdkVersions() {
-		const serviceNames = new Set<string>();
+	private static extractServiceNameAndPrefix(
+		serviceName: string,
+	): SdkVpcEndpoint {
+		// match com.amazonaws.us-east-1.rds
+		let match = serviceName.match(
+			Ec2VpcEndpointRunner.defaultVpcEndpointPrefix,
+		);
+		if (match) {
+			return { service: serviceName.substring(match[0].length) };
+		}
 
+		// match aws.sagemaker.us-east-1.notebook
+		match = serviceName.match(Ec2VpcEndpointRunner.prefixVpcEndpointPrefix);
+		if (match?.groups) {
+			const {
+				groups: { prefix, service },
+			} = match;
+			return { prefix, service };
+		}
+
+		// match com.amazonaws.s3-global.accesspoint
+		match = serviceName.match(
+			Ec2VpcEndpointRunner.globalPrefixVpcEndpointPrefix,
+		);
+		if (!match?.groups) {
+			throw new Error(
+				`Could not extract service name and prefix from ${serviceName}`,
+			);
+		}
+		const {
+			groups: { prefix, service },
+		} = match;
+
+		return { prefix, service };
+	}
+
+	protected async fetchSdkVersions() {
+		const endpoints: SdkVpcEndpoint[] = [];
+
+		// FIXME https://github.com/aws/aws-sdk-js/issues/4614
+		/* const paginator = paginateDescribeVpcEndpointServices(
+			{ client: Ec2VpcEndpointRunner.client, pageSize: 100 },
+			{},
+		);*/
 		let nextToken: string | undefined;
 		do {
 			const { ServiceNames = [], NextToken } =
@@ -115,40 +172,42 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 			nextToken = NextToken;
 
 			for (const serviceName of ServiceNames) {
-				const match = serviceName.match(Ec2VpcEndpointRunner.vpcEndpointPrefix);
-				// FIXME check that nothing is missing
-				if (!match) {
-					console.log("didnt match", serviceName);
-					continue;
-				}
-				serviceNames.add(serviceName.substring(match[0].length));
+				endpoints.push(
+					Ec2VpcEndpointRunner.extractServiceNameAndPrefix(serviceName),
+				);
 			}
-			console.log(serviceNames);
 		} while (nextToken);
 
-		// FIXME https://github.com/aws/aws-sdk-js/issues/4614
-		/* const paginator = paginateDescribeVpcEndpointServices(
-			{ client: Ec2VpcEndpointRunner.client, pageSize: 100 },
-			{},
-		);*/
-
-		return Array.from(serviceNames).map((version) => ({
+		return endpoints.map((version) => ({
 			version,
 			isDeprecated: false,
 		}));
 	}
 
-	protected getCdkVersionId(vpcEndpoint: VpcEndpointType) {
-		return (
-			(vpcEndpoint as InterfaceVpcEndpointAwsService).shortName ??
-			vpcEndpoint.name.replace(
-				/^com.amazonaws.\${Token\[AWS.Region.\d+\]}./,
-				"",
-			)
-		);
+	protected getCdkVersionId(endpoint: VpcEndpointType) {
+		try {
+			const { prefix, service } =
+				Ec2VpcEndpointRunner.extractServiceNameAndPrefix(endpoint.name);
+
+			return prefix ? `${prefix}.${service}` : service;
+		} catch (err) {
+			if (isInterfaceVpcEndpointAwsService(endpoint)) {
+				if (["accesspoint", "notebook"].includes(endpoint.shortName)) {
+					console.log(endpoint);
+				}
+				return endpoint.shortName;
+			}
+
+			console.error(endpoint);
+			console.error(err);
+			return endpoint.name;
+		}
 	}
 
-	protected getSdkVersionId(serviceName: string) {
-		return serviceName;
+	protected getSdkVersionId({ service, prefix }: SdkVpcEndpoint) {
+		return prefix ? `${prefix}.${service}` : service;
 	}
 }
+
+const c = new Ec2VpcEndpointRunner();
+c.run().then((res) => c.consoleOutputResults(res, { oneLine: true }));
