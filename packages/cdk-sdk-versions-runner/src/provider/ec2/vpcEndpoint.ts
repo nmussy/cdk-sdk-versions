@@ -2,7 +2,10 @@ import {
 	DescribeVpcEndpointServicesCommand,
 	EC2Client,
 } from "@aws-sdk/client-ec2";
-import { InterfaceVpcEndpointAwsService } from "aws-cdk-lib/aws-ec2";
+import {
+	GatewayVpcEndpointAwsService,
+	InterfaceVpcEndpointAwsService,
+} from "aws-cdk-lib/aws-ec2";
 import {
 	CdkSdkVersionRunner,
 	VersionStorageType,
@@ -11,8 +14,12 @@ import {
 import { CdkLibPath } from "../../util/cdk";
 import { getStaticFieldComments } from "../../util/tsdoc";
 
+type VpcEndpointType =
+	| InterfaceVpcEndpointAwsService
+	| GatewayVpcEndpointAwsService;
+
 export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
-	InterfaceVpcEndpointAwsService,
+	VpcEndpointType,
 	string
 > {
 	private static readonly client = new EC2Client({});
@@ -20,6 +27,12 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 	public static readonly vpcEndpointPath = new CdkLibPath(
 		"aws-ec2/lib/vpc-endpoint.d.ts",
 	);
+
+	private static readonly vpcEndpointPrefix = /^com\.amazonaws\.[a-z\d-]+\./;
+	private static readonly interfaceVpcEndpointConstructorRegex =
+		/new InterfaceVpcEndpointAwsService\('(?<vpcEndpoint>[\w.:-]+)'\)/;
+	private static readonly gatewayVpcEndpointConstructorRegex =
+		/new GatewayVpcEndpointAwsService\('(?<vpcEndpoint>[\w.:-]+)'\)/;
 
 	constructor() {
 		super("Ec2VpcEndpoints", {
@@ -29,8 +42,7 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 	}
 
 	protected async generateCdkVersions() {
-		const VpcEndpoints: DeprecableVersion<InterfaceVpcEndpointAwsService>[] =
-			[];
+		const VpcEndpoints: DeprecableVersion<VpcEndpointType>[] = [];
 
 		for (const {
 			className,
@@ -38,19 +50,47 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 			fieldValue,
 			isDeprecated,
 		} of getStaticFieldComments(Ec2VpcEndpointRunner.vpcEndpointPath.auto)) {
-			if (className !== "InterfaceVpcEndpointAwsService") continue;
+			if (
+				![
+					"GatewayVpcEndpointAwsService",
+					"InterfaceVpcEndpointAwsService",
+				].includes(className)
+			)
+				continue;
 
-			let version: InterfaceVpcEndpointAwsService;
+			let version: VpcEndpointType;
 			if (fieldName in InterfaceVpcEndpointAwsService) {
 				version =
 					InterfaceVpcEndpointAwsService[
 						fieldName as keyof typeof InterfaceVpcEndpointAwsService
 					];
+			} else if (fieldName in GatewayVpcEndpointAwsService) {
+				version =
+					GatewayVpcEndpointAwsService[
+						fieldName as keyof typeof GatewayVpcEndpointAwsService
+					];
 			} else {
-				console.warn(
-					`Unknown version: ${fieldName}, replacing with new InterfaceVpcEndpointAwsService("${fieldValue}")`,
+				let classInit:
+					| typeof InterfaceVpcEndpointAwsService
+					| typeof GatewayVpcEndpointAwsService =
+					InterfaceVpcEndpointAwsService;
+				let match = fieldValue.match(
+					Ec2VpcEndpointRunner.interfaceVpcEndpointConstructorRegex,
 				);
-				version = new InterfaceVpcEndpointAwsService(fieldValue);
+				if (!match?.groups) {
+					match = fieldValue.match(
+						Ec2VpcEndpointRunner.gatewayVpcEndpointConstructorRegex,
+					);
+					classInit = GatewayVpcEndpointAwsService;
+				}
+				if (!match?.groups) throw new Error(`Unknown modelId: ${fieldValue}`);
+				const {
+					groups: { vpcEndpoint },
+				} = match;
+				/* console.warn(
+					`Unknown version: ${fieldName}, replacing with new ${classInit.name}("${vpcEndpoint}")`,
+				); */
+				version = new classInit(vpcEndpoint);
 			}
 
 			VpcEndpoints.push({ version, isDeprecated });
@@ -75,12 +115,15 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 			nextToken = NextToken;
 
 			for (const serviceName of ServiceNames) {
-				// FIXME
-				if (!serviceName.startsWith("com.amazonaws.us-east-1.")) continue;
-				serviceNames.add(
-					serviceName.replace(/^com\.amazonaws\.us-east-1\./, ""),
-				);
+				const match = serviceName.match(Ec2VpcEndpointRunner.vpcEndpointPrefix);
+				// FIXME check that nothing is missing
+				if (!match) {
+					console.log("didnt match", serviceName);
+					continue;
+				}
+				serviceNames.add(serviceName.substring(match[0].length));
 			}
+			console.log(serviceNames);
 		} while (nextToken);
 
 		// FIXME https://github.com/aws/aws-sdk-js/issues/4614
@@ -95,8 +138,14 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 		}));
 	}
 
-	protected getCdkVersionId({ shortName }: InterfaceVpcEndpointAwsService) {
-		return shortName;
+	protected getCdkVersionId(vpcEndpoint: VpcEndpointType) {
+		return (
+			(vpcEndpoint as InterfaceVpcEndpointAwsService).shortName ??
+			vpcEndpoint.name.replace(
+				/^com.amazonaws.\${Token\[AWS.Region.\d+\]}./,
+				"",
+			)
+		);
 	}
 
 	protected getSdkVersionId(serviceName: string) {
