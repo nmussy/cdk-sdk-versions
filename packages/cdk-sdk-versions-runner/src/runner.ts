@@ -88,13 +88,13 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 	// Prevent performing needless SDK requests/TypeScript parsing
 	// by preventing multiple instances of the same runner
 	// Each runner is then responsible for its own caching scheme
-	private static singletons: CdkSdkVersionRunner<unknown, unknown>[] = [];
+	// private static singletons: CdkSdkVersionRunner<unknown, unknown>[] = [];
 
 	protected constructor(
 		protected readonly identifier: string,
 		protected readonly codeGenerationConfiguration: CodeGenerationConfiguration,
 	) {
-		if (process.env.NODE_ENV === "test") return;
+		/* if (process.env.NODE_ENV === "test") return;
 
 		if (
 			CdkSdkVersionRunner.singletons.find(
@@ -102,7 +102,7 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 			)
 		)
 			throw new Error(`Should not create multiple instances of ${identifier}`);
-		CdkSdkVersionRunner.singletons.push(this);
+		CdkSdkVersionRunner.singletons.push(this); */
 	}
 
 	protected abstract generateCdkVersions(): Promise<DeprecableVersion<TCdk>[]>;
@@ -129,12 +129,10 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 		throw new Error("never");
 	}
 
-	public async run(): Promise<RunnerResults<TCdk, TSdk>> {
-		const [cdkVersions, sdkVersions] = await Promise.all([
-			this.generateCdkVersions(),
-			this.fetchSdkVersions(),
-		]);
-
+	protected async runWithParams(
+		cdkVersions: DeprecableVersion<TCdk>[],
+		sdkVersions: DeprecableVersion<TSdk>[],
+	): Promise<RunnerResults<TCdk, TSdk>> {
 		const runnerResults = generateEmptyRunnerResults<TCdk, TSdk>();
 
 		for (const cdkVersion of cdkVersions) {
@@ -172,6 +170,15 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 		}
 
 		return runnerResults;
+	}
+
+	public async run(): Promise<RunnerResults<TCdk, TSdk>> {
+		const [cdkVersions, sdkVersions] = await Promise.all([
+			this.generateCdkVersions(),
+			this.fetchSdkVersions(),
+		]);
+
+		return this.runWithParams(cdkVersions, sdkVersions);
 	}
 
 	protected generateCodeResultFromCdkVersion(

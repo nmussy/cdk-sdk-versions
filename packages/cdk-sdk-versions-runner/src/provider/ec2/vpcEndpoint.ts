@@ -6,6 +6,7 @@ import {
 	GatewayVpcEndpointAwsService,
 	InterfaceVpcEndpointAwsService,
 } from "aws-cdk-lib/aws-ec2";
+import { isEqualWith } from "lodash";
 import {
 	CdkSdkVersionRunner,
 	VersionStorageType,
@@ -32,7 +33,7 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 	VpcEndpointType,
 	SdkVpcEndpoint
 > {
-	private static readonly client = new EC2Client({});
+	private readonly client = new EC2Client({ region: this.region });
 
 	public static readonly vpcEndpointPath = new CdkLibPath(
 		"aws-ec2/lib/vpc-endpoint.d.ts",
@@ -43,14 +44,14 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 	private static readonly prefixVpcEndpointPrefix =
 		/^^(?<prefix>[\w.]+)\.(\w+-\w+-\d+|\${Token\[(AWS\.Region|TOKEN)\.\d+\]})\.(?<service>[\w.-]+)/;
 	private static readonly globalPrefixVpcEndpointPrefix =
-		/^(?<prefix>com\.amazonaws)\.(?<service>[\w.-]+)/;
+		/^(?<prefix>(com\.amazonaws|aws\.api))\.(?<service>[\w.-]+)/;
 
 	private static readonly interfaceVpcEndpointConstructorRegex =
 		/new InterfaceVpcEndpointAwsService\('(?<service>[\w.:-]+)'(, '(?<prefix>[\w.:-]+)')?\);/;
 	private static readonly gatewayVpcEndpointConstructorRegex =
 		/new GatewayVpcEndpointAwsService\('(?<service>[\w.:-]+)'(, '(?<prefix>[\w.:-]+)')?\);/;
 
-	constructor() {
+	constructor(public readonly region?: string) {
 		super("Ec2VpcEndpoints", {
 			storageType: VersionStorageType.ClassWithStaticMembers,
 			className: "InterfaceVpcEndpointAwsService",
@@ -151,6 +152,47 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 		return { prefix, service };
 	}
 
+	public static async runWithMultipleRegions(
+		regions: string[],
+		logRegionalAdditions = true,
+	) {
+		const mergedSdkVersions: DeprecableVersion<SdkVpcEndpoint>[] = [];
+		const cdkVersions: DeprecableVersion<VpcEndpointType>[] = [];
+
+		let firstIteration = true;
+		for (const region of regions) {
+			const runner = new Ec2VpcEndpointRunner(region);
+			const sdkVersions = await runner.fetchSdkVersions();
+
+			if (firstIteration) {
+				mergedSdkVersions.push(...sdkVersions);
+				cdkVersions.push(...(await runner.generateCdkVersions()));
+				firstIteration = false;
+				continue;
+			}
+
+			for (const sdkVersion of sdkVersions.filter(
+				(sdkVersion) =>
+					!mergedSdkVersions.find((existingVersion) =>
+						isEqualWith(existingVersion, sdkVersion),
+					),
+			)) {
+				if (logRegionalAdditions)
+					console.log(
+						`[${region}] Found new version: ${runner.getSdkVersionId(
+							sdkVersion.version,
+						)}`,
+					);
+				mergedSdkVersions.push(sdkVersion);
+			}
+		}
+
+		return new Ec2VpcEndpointRunner().runWithParams(
+			cdkVersions,
+			Array.from(mergedSdkVersions),
+		);
+	}
+
 	protected async fetchSdkVersions() {
 		const endpoints: SdkVpcEndpoint[] = [];
 
@@ -161,13 +203,12 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 		);*/
 		let nextToken: string | undefined;
 		do {
-			const { ServiceNames = [], NextToken } =
-				await Ec2VpcEndpointRunner.client.send(
-					new DescribeVpcEndpointServicesCommand({
-						MaxResults: 100,
-						NextToken: nextToken,
-					}),
-				);
+			const { ServiceNames = [], NextToken } = await this.client.send(
+				new DescribeVpcEndpointServicesCommand({
+					MaxResults: 100,
+					NextToken: nextToken,
+				}),
+			);
 
 			nextToken = NextToken;
 
@@ -209,5 +250,12 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 	}
 }
 
+/* const c = new Ec2VpcEndpointRunner();
+c.run().then((res) => c.consoleOutputResults(res, { oneLine: true })); */
+
 const c = new Ec2VpcEndpointRunner();
-c.run().then((res) => c.consoleOutputResults(res, { oneLine: true }));
+Ec2VpcEndpointRunner.runWithMultipleRegions([
+	"us-east-1",
+	"us-west-2",
+	"eu-central-1",
+]).then((res) => c.consoleOutputResults(res, { oneLine: false }));
