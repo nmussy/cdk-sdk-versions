@@ -101,13 +101,19 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 					classInit = GatewayVpcEndpointAwsService;
 				}
 				if (!match?.groups) throw new Error(`Unknown modelId: ${fieldValue}`);
+
 				const {
 					groups: { service, prefix },
 				} = match;
-				/* console.warn(
-					`Unknown version: ${fieldName}, replacing with new ${classInit.name}("${service}", "${prefix}")`,
-				); */
-				version = new classInit(service, prefix);
+
+				console.warn(
+					`Unknown version: ${fieldName}, replacing with new ${
+						classInit.name
+					}("${service}"${prefix ? `, "${prefix}"` : ""})`,
+				);
+				version = prefix
+					? new classInit(service, prefix)
+					: new classInit(service);
 			}
 
 			VpcEndpoints.push({ version, isDeprecated });
