@@ -41,9 +41,9 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 
 	private static readonly defaultVpcEndpointPrefix =
 		/^com\.amazonaws\.(\w+-\w+-\d+|\${Token\[(AWS\.Region|TOKEN)\.\d+\]})./;
-	private static readonly prefixVpcEndpointPrefix =
+	private static readonly customPrefixVpcEndpoint =
 		/^^(?<prefix>[\w.]+)\.(\w+-\w+-\d+|\${Token\[(AWS\.Region|TOKEN)\.\d+\]})\.(?<service>[\w.-]+)/;
-	private static readonly globalPrefixVpcEndpointPrefix =
+	private static readonly globalVpcEndpoint =
 		/^(?<prefix>(com\.amazonaws|aws\.api))\.(?<service>[\w.-]+)/;
 
 	private static readonly interfaceVpcEndpointConstructorRegex =
@@ -125,7 +125,7 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 	private static extractServiceNameAndPrefix(
 		serviceName: string,
 	): SdkVpcEndpoint {
-		// match com.amazonaws.us-east-1.rds
+		// match local com.amazonaws.*, e.g. com.amazonaws.us-east-1.rds
 		let match = serviceName.match(
 			Ec2VpcEndpointRunner.defaultVpcEndpointPrefix,
 		);
@@ -133,8 +133,8 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 			return { service: serviceName.substring(match[0].length) };
 		}
 
-		// match aws.sagemaker.us-east-1.notebook
-		match = serviceName.match(Ec2VpcEndpointRunner.prefixVpcEndpointPrefix);
+		// match local with custom prefix, aws.sagemaker.us-east-1.notebook
+		match = serviceName.match(Ec2VpcEndpointRunner.customPrefixVpcEndpoint);
 		if (match?.groups) {
 			const {
 				groups: { prefix, service },
@@ -142,10 +142,8 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 			return { prefix, service };
 		}
 
-		// match com.amazonaws.s3-global.accesspoint
-		match = serviceName.match(
-			Ec2VpcEndpointRunner.globalPrefixVpcEndpointPrefix,
-		);
+		// match global, e.g. com.amazonaws.s3-global.accesspoint
+		match = serviceName.match(Ec2VpcEndpointRunner.globalVpcEndpoint);
 		if (!match?.groups) {
 			throw new Error(
 				`Could not extract service name and prefix from ${serviceName}`,
@@ -239,9 +237,6 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 			return prefix ? `${prefix}.${service}` : service;
 		} catch (err) {
 			if (isInterfaceVpcEndpointAwsService(endpoint)) {
-				if (["accesspoint", "notebook"].includes(endpoint.shortName)) {
-					console.log(endpoint);
-				}
 				return endpoint.shortName;
 			}
 
