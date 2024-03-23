@@ -3,9 +3,11 @@ import {
 	paginateListImages,
 	type ListImagesCommandInput,
 } from "@aws-sdk/client-ecr";
-import { EKSClient } from "@aws-sdk/client-eks";
 import { AlbControllerVersion } from "aws-cdk-lib/aws-eks";
+import { exec as _exec } from "node:child_process";
+import { promisify } from "node:util";
 import type { ReadonlyDeep } from "type-fest";
+import which from "which";
 import {
 	CdkSdkVersionRunner,
 	VersionStorageType,
@@ -14,17 +16,35 @@ import {
 import { CdkLibPath } from "../util/cdk";
 import { getStaticFieldComments } from "../util/tsdoc";
 
+const exec = promisify(_exec);
+
+type HelmSearchRepoResult = {
+	name: string;
+	version: string;
+	app_version: string;
+	description?: string;
+};
+type HelmSearchRepoCommandOutput = HelmSearchRepoResult[];
+
+interface SdkAlbControllerVersion {
+	version: string;
+	helmVersion: string;
+}
+
 export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 	AlbControllerVersion,
-	string
+	SdkAlbControllerVersion
 > {
-	private static readonly eksClient = new EKSClient();
+	// private static readonly eksClient = new EKSClient();
 	private static readonly ecrClient = new ECRClient();
 
+	private static readonly repositoryName = "aws-load-balancer-controller";
+	private static readonly helmCommand =
+		`helm search repo ${EksAlbControllerRunner.repositoryName} --versions --output json`;
 	private static repositoryInfo: ReadonlyDeep<
 		Required<Pick<ListImagesCommandInput, "repositoryName" | "registryId">>
 	> = {
-		repositoryName: "amazon/aws-load-balancer-controller",
+		repositoryName: `amazon/${EksAlbControllerRunner.repositoryName}`,
 		registryId: "602401143452",
 	};
 
@@ -38,9 +58,15 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 	private static readonly albControllerCnstructorRegex =
 		/new AlbControllerVersion\('(?<versionName>[\w.-]+)', '(?<helmVersion>[\w.-]+)',false\)/;
 
+	public static readonly __MISSING_HELM_VERSION__ = "__MISSING_HELM_VERSION__";
 	public static readonly __MISSING_IMAGE_TAG__ = "__MISSING_IMAGE_TAG__";
 
 	constructor() {
+		if (!which.sync("helm"))
+			throw new Error(
+				"'helm' command not found in PATH. Helm is required to fetch ALB controller versions",
+			);
+
 		super("EksAlbController", {
 			storageType: VersionStorageType.ClassWithStaticMembers,
 			className: "AlbControllerVersion",
@@ -76,6 +102,7 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 				const {
 					groups: { versionName, helmVersion },
 				} = match;
+
 				console.warn(
 					`Unknown version: ${fieldName}, replacing with AlbControllerVersion.of("${versionName}", "${helmVersion}")`,
 				);
@@ -89,7 +116,7 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 	}
 
 	protected async fetchSdkVersions() {
-		const versions: string[] = [];
+		const albVersions: string[] = [];
 
 		const paginator = paginateListImages(
 			{ client: EksAlbControllerRunner.ecrClient, pageSize: 100 },
@@ -97,7 +124,7 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 		);
 
 		for await (const { imageIds = [] } of paginator) {
-			versions.push(
+			albVersions.push(
 				...imageIds
 					.map(
 						({ imageTag = EksAlbControllerRunner.__MISSING_IMAGE_TAG__ }) =>
@@ -109,15 +136,38 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 			);
 		}
 
-		return versions.map((version) => ({ version, isDeprecated: false }));
+		const { stdout, stderr } = await exec(EksAlbControllerRunner.helmCommand);
+		if (stderr) throw new Error(stderr);
+		const helmVersions = JSON.parse(stdout) as HelmSearchRepoCommandOutput;
+
+		return albVersions
+			.map((version) => {
+				const helmVersion =
+					helmVersions.find(({ app_version }) => app_version === version)
+						?.version ?? EksAlbControllerRunner.__MISSING_HELM_VERSION__;
+
+				if (helmVersion === EksAlbControllerRunner.__MISSING_HELM_VERSION__) {
+					console.warn(
+						`Helm version not found for ALB controller version ${version}`,
+					);
+				}
+
+				return { version, helmVersion };
+			})
+			.map((version) => ({ version, isDeprecated: false }));
 	}
 
-	protected getCdkVersionId({ version }: AlbControllerVersion) {
-		return version;
+	protected getCdkVersionId({
+		version,
+		helmChartVersion,
+	}: AlbControllerVersion) {
+		return [version, helmChartVersion].join(
+			CdkSdkVersionRunner.ARGUMENT_SEPARATOR,
+		);
 	}
 
-	protected getSdkVersionId(version: string) {
-		return version;
+	protected getSdkVersionId({ version, helmVersion }: SdkAlbControllerVersion) {
+		return [version, helmVersion].join(CdkSdkVersionRunner.ARGUMENT_SEPARATOR);
 	}
 }
 

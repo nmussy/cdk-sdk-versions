@@ -85,6 +85,14 @@ export interface ConsoleOutputOptions {
 }
 
 export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
+	protected static readonly ARGUMENT_SEPARATOR = "###";
+	protected static generateArguments(versionValue: string) {
+		return versionValue
+			.split(CdkSdkVersionRunner.ARGUMENT_SEPARATOR)
+			.map((arg) => `'${arg}'`)
+			.join(", ");
+	}
+
 	// Prevent performing needless SDK requests/TypeScript parsing
 	// by preventing multiple instances of the same runner
 	// Each runner is then responsible for its own caching scheme
@@ -190,20 +198,22 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 			? this.getCdkVersionId(result.cdkVersion as TCdk)
 			: this.getSdkVersionId(result.sdkVersion as TSdk);
 
+		const versionArgs = CdkSdkVersionRunner.generateArguments(versionValue);
+
 		const { storageType } = this.codeGenerationConfiguration;
 		if (storageType === VersionStorageType.ClassWithStaticMembers) {
 			const { className, factoryMethod } = this.codeGenerationConfiguration;
 
-			if (!factoryMethod) return `new ${className}('${versionValue}');`;
+			if (!factoryMethod) return `new ${className}(${versionArgs});`;
 
-			return `${className}.${factoryMethod}('${versionValue}');`;
+			return `${className}.${factoryMethod}(${versionArgs});`;
 		}
 
 		if (storageType === VersionStorageType.Enum) {
 			// const { enumName } = this.codeGenerationConfiguration;
 			return `${versionValue
 				.toLocaleUpperCase()
-				.replace(/[-.]/g, "_")} = '${versionValue}',`;
+				.replace(/[-.]/g, "_")} = ${versionArgs},`;
 		}
 
 		throw new Error("not implemented");
@@ -221,7 +231,11 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 			results
 				.sort(({ result: a }, { result: b }) => a.localeCompare(b))
 				.map((result) => {
-					console.log(runnerActionConsoleTaggedTemplate[action](result.result));
+					const versionArgs = CdkSdkVersionRunner.generateArguments(
+						result.result,
+					);
+
+					console.log(runnerActionConsoleTaggedTemplate[action](versionArgs));
 					if (oneLine) return;
 
 					console.log(this.generateCodeResultFromCdkVersion(result));

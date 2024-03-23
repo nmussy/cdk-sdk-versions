@@ -35,7 +35,8 @@
 		"chalk": "^4.1.2",
 		"constructs": "^10.3.0",
 		"lodash": "^4.17.21",
-		"typescript": "^5.4.2"
+		"typescript": "^5.4.2",
+		"which": "^4.0.0"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.24.0",
@@ -47,6 +48,7 @@
 		"@types/babel__core": "^7.20.5",
 		"@types/lodash": "^4.17.0",
 		"@types/node": "^20.11.28",
+		"@types/which": "^3.0.3",
 		"alias-hq": "^6.2.3",
 		"aws-sdk-client-mock": "4.0.0",
 		"aws-sdk-client-mock-jest": "4.0.0",
