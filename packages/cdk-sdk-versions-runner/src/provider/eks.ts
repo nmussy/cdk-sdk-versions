@@ -183,14 +183,3 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 
 	return Array.from(versions);
 }; */
-
-const runner = new EksAlbControllerRunner();
-runner.run().then((results) => {
-	console.log(
-		results.REMOVE.map(
-			({ cdkVersion }) =>
-				(cdkVersion?.version ?? "") + (cdkVersion?.helmChartVersion ?? ""),
-		),
-	);
-	runner.consoleOutputResults(results);
-});
