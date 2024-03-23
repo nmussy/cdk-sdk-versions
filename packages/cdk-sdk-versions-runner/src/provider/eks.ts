@@ -56,7 +56,7 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 	// e.g. v2.0.0-rc5, v2.4.2-linux_amd64, v2.0.0-test-linux_amd64
 	private static readonly validImageTagRegex = /^v\d+\.\d+\.\d+$/;
 	private static readonly albControllerCnstructorRegex =
-		/new AlbControllerVersion\('(?<versionName>[\w.-]+)', '(?<helmVersion>[\w.-]+)',false\)/;
+		/new AlbControllerVersion\('(?<versionName>[\w.-]+)', '(?<helmVersion>[\w.-]+)', false\)/;
 
 	public static readonly __MISSING_HELM_VERSION__ = "__MISSING_HELM_VERSION__";
 	public static readonly __MISSING_IMAGE_TAG__ = "__MISSING_IMAGE_TAG__";
@@ -88,26 +88,15 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 		)) {
 			if (className !== "AlbControllerVersion") continue;
 
-			let version: AlbControllerVersion;
-			if (fieldName in AlbControllerVersion) {
-				version = AlbControllerVersion[
-					fieldName as keyof typeof AlbControllerVersion
-				] as AlbControllerVersion;
-			} else {
-				const match = fieldValue.match(
-					EksAlbControllerRunner.albControllerCnstructorRegex,
-				);
-				console.log(match?.groups);
-				if (!match?.groups) throw new Error(`Unknown version: ${fieldValue}`);
-				const {
-					groups: { versionName, helmVersion },
-				} = match;
+			const match = fieldValue.match(
+				EksAlbControllerRunner.albControllerCnstructorRegex,
+			);
+			if (!match?.groups) throw new Error(`Unknown version: ${fieldValue}`);
+			const {
+				groups: { versionName, helmVersion },
+			} = match;
 
-				console.warn(
-					`Unknown version: ${fieldName}, replacing with AlbControllerVersion.of("${versionName}", "${helmVersion}")`,
-				);
-				version = AlbControllerVersion.of(versionName, helmVersion);
-			}
+			const version = AlbControllerVersion.of(versionName, helmVersion);
 
 			runtimes.push({ version, isDeprecated });
 		}
@@ -194,3 +183,14 @@ export class EksAlbControllerRunner extends CdkSdkVersionRunner<
 
 	return Array.from(versions);
 }; */
+
+const runner = new EksAlbControllerRunner();
+runner.run().then((results) => {
+	console.log(
+		results.REMOVE.map(
+			({ cdkVersion }) =>
+				(cdkVersion?.version ?? "") + (cdkVersion?.helmChartVersion ?? ""),
+		),
+	);
+	runner.consoleOutputResults(results);
+});
