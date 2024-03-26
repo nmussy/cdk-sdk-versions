@@ -118,10 +118,9 @@ if (!argv._.includes(Command.RUN)) {
 const run = async (argv: YargsResult) => {
 	const oneLine = argv[Option.ONE_LINE];
 
-	const selectedRunnerKeys =
-		argv[Option.RUNNNER] === ALL_RUNNERS
-			? runnerKeys
-			: [argv[Option.RUNNNER] as RunnerKey];
+	const selectedRunnerKeys = argv[Option.RUNNNER].includes(ALL_RUNNERS)
+		? runnerKeys
+		: [argv[Option.RUNNNER] as RunnerKey];
 
 	const selectedRunners = Object.fromEntries(
 		selectedRunnerKeys.map<Entry<Record<RunnerKey, Runner[]>>>((key) => [
