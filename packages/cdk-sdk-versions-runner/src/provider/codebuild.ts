@@ -35,6 +35,11 @@ enum PlatformType {
 	WINDOWS_SERVER_2022 = "WINDOWS_SERVER_2022",
 }
 
+enum Runtime {
+	LAMBDA = "LAMBDA",
+	OTHER = "OTHER",
+}
+
 export type BuildImageClass =
 	| "WindowsBuildImage"
 	| "LinuxBuildImage"
@@ -99,7 +104,7 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 	}
 
 	private static readonly imageFromFactoryRegex =
-		/\w+.fromCodeBuildImageId\('(?<imageId>[\w.-]+)'\)/;
+		/\w+\.(fromCodeBuildImageId|codeBuildImage)\('(?<imageId>[\w.:\/-]+)'\)/;
 	private static readonly imageObjectFactoryRegex =
 		/^\s*imageId: '(?<imageId>[\w\/.:-]+)'/m;
 
@@ -121,19 +126,36 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 		return Architecture.x86_64;
 	}
 
-	private static getPlatformMappedImageIds(languages: EnvironmentLanguage[]) {
+	private static getRuntimeFromImageId(imageId: string) {
+		if (imageId.includes("-lambda")) return Runtime.LAMBDA;
+		return Runtime.OTHER;
+	}
+
+	private static groupImagesIdsBy<T extends string>(
+		imageIds: string[],
+		groupByMethod: (imageId: string) => T,
+	) {
 		return mapValues(
 			groupBy(
-				languages
-					.flatMap(({ images = [] }) => images)
-					.map(({ name = CodeBuildImageRunner.MISSING_IMAGE_NAME }) => [
-						CodeBuildImageRunner.getArchitectureFromImageId(name),
-						name,
-					]),
-				([architecture]) => architecture,
+				imageIds.map((imageId) => [groupByMethod(imageId), imageId]),
+				([key]) => key,
 			),
 			(values) => values.map(([, image]) => image),
-		) as Record<Architecture, string[]>;
+		) as Record<T, string[]>;
+	}
+
+	private static getRuntimeMappedImageIds(imageIds: string[]) {
+		return CodeBuildImageRunner.groupImagesIdsBy(
+			imageIds,
+			CodeBuildImageRunner.getRuntimeFromImageId,
+		);
+	}
+
+	private static getArchitectureMappedImageIds(imageIds: string[]) {
+		return CodeBuildImageRunner.groupImagesIdsBy(
+			imageIds,
+			CodeBuildImageRunner.getArchitectureFromImageId,
+		);
 	}
 
 	private static fetchSdkBuildImagesPromise: Promise<SdkBuildImageMap>;
@@ -170,14 +192,37 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 					);
 					break;
 				case PlatformType.AMAZON_LINUX_2: {
-					const mappedImages =
-						CodeBuildImageRunner.getPlatformMappedImageIds(languages);
-					sdkBuildImages.LinuxLambdaBuildImage.push(
-						...mappedImages[Architecture.x86_64],
-					);
-					sdkBuildImages.LinuxArmBuildImage.push(
-						...mappedImages[Architecture.arm64],
-					);
+					const runtimeMappedImages =
+						CodeBuildImageRunner.getRuntimeMappedImageIds(
+							CodeBuildImageRunner.getFlatImageIds(languages),
+						);
+
+					{
+						const archtectureMappedImages =
+							CodeBuildImageRunner.getArchitectureMappedImageIds(
+								runtimeMappedImages[Runtime.OTHER],
+							);
+						sdkBuildImages.LinuxBuildImage.push(
+							...archtectureMappedImages[Architecture.x86_64],
+						);
+						sdkBuildImages.LinuxArmBuildImage.push(
+							...archtectureMappedImages[Architecture.arm64],
+						);
+					}
+
+					{
+						const archtectureMappedLambdaImages =
+							CodeBuildImageRunner.getArchitectureMappedImageIds(
+								runtimeMappedImages[Runtime.LAMBDA],
+							);
+						sdkBuildImages.LinuxLambdaBuildImage.push(
+							...archtectureMappedLambdaImages[Architecture.x86_64],
+						);
+						sdkBuildImages.LinuxArmLambdaBuildImage.push(
+							...archtectureMappedLambdaImages[Architecture.arm64],
+						);
+					}
+
 					break;
 				}
 				// Not supported by the CDK
@@ -243,13 +288,23 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 					const {
 						groups: { imageId },
 					} = match;
-					console.warn(
-						`Unknown version: ${fieldName}, replacing with new ${className}("${imageId}")`,
-					);
 
-					// FIXME cannot use .fromCodeBuildImageId(), missing from WindowsBuildImage
-					// @ts-ignore private constructor
-					version = new imageClass(imageId);
+					if (className === "WindowsBuildImage") {
+						// @ts-ignore private constructor
+						version = new WindowsBuildImage({ imageId });
+
+						console.warn(
+							`Unknown version: ${fieldName}, replacing with new ${className}("${imageId}")`,
+						);
+					} else {
+						// FIXME cannot use .fromCodeBuildImageId(), missing from WindowsBuildImage
+						// @ts-ignore
+						version = imageClass.fromCodeBuildImageId(imageId);
+
+						console.warn(
+							`Unknown version: ${fieldName}, replacing with new ${className}("${imageId}")`,
+						);
+					}
 				}
 
 				images[imageClassName].push({ version, isDeprecated });

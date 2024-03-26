@@ -192,11 +192,15 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 	protected generateCodeResultFromCdkVersion(
 		result: RunnerResult<TCdk, TSdk>,
 	): string {
-		if (!result.cdkVersion && !result.sdkVersion) throw new Error("never");
-
 		const versionValue = result.cdkVersion
 			? this.getCdkVersionId(result.cdkVersion as TCdk)
 			: this.getSdkVersionId(result.sdkVersion as TSdk);
+
+		if (!versionValue) {
+			throw new Error(
+				`versionValue is empty for result: ${JSON.stringify(result)}`,
+			);
+		}
 
 		const versionArgs = CdkSdkVersionRunner.generateArguments(versionValue);
 
@@ -231,9 +235,18 @@ export abstract class CdkSdkVersionRunner<TCdk, TSdk> {
 			results
 				.sort(({ result: a }, { result: b }) => a.localeCompare(b))
 				.map((result) => {
-					const versionArgs = CdkSdkVersionRunner.generateArguments(
-						result.result,
-					);
+					const versionValue = result.cdkVersion
+						? this.getCdkVersionId(result.cdkVersion as TCdk)
+						: this.getSdkVersionId(result.sdkVersion as TSdk);
+
+					if (!versionValue) {
+						throw new Error(
+							`versionValue is empty for result: ${JSON.stringify(result)}`,
+						);
+					}
+
+					const versionArgs =
+						CdkSdkVersionRunner.generateArguments(versionValue);
 
 					console.log(runnerActionConsoleTaggedTemplate[action](versionArgs));
 					if (oneLine) return;

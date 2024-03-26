@@ -103,6 +103,9 @@ cli.command(`${Command.RUN} [${Option.RUNNNER}]`, "Run a runner", (yargs) => {
 
 const argv = cli.parse() as unknown as YargsResult;
 if (!argv._.includes(Command.RUN)) {
+	console.error(
+		"You must provide a valid command, use --help to see available commands.",
+	);
 	process.exit(1);
 }
 

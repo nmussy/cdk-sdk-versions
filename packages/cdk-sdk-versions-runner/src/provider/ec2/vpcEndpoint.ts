@@ -254,9 +254,9 @@ export class Ec2VpcEndpointRunner extends CdkSdkVersionRunner<
 /* const c = new Ec2VpcEndpointRunner();
 c.run().then((res) => c.consoleOutputResults(res, { oneLine: true })); */
 
-const c = new Ec2VpcEndpointRunner();
+/* const c = new Ec2VpcEndpointRunner();
 Ec2VpcEndpointRunner.runWithMultipleRegions([
 	"us-east-1",
 	"us-west-2",
 	"eu-central-1",
-]).then((res) => c.consoleOutputResults(res, { oneLine: false }));
+]).then((res) => c.consoleOutputResults(res, { oneLine: false })); */
