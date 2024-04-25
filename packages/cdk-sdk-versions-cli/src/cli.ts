@@ -3,6 +3,7 @@ import {
 	BedrockRunner,
 	Ec2InstanceClassRunner,
 	Ec2InstanceSizeRunner,
+	Ec2NamedInstanceTypeRunner,
 	Ec2WindowsVersionRunner,
 	KafkaRunner,
 	LinuxArmBuildImageRunner,
@@ -50,7 +51,12 @@ const runners: Record<string, Runner[]> = {
 		RdsAuroraMysqlEngineRunner,
 		RdsAuroraPostgresEngineRunner,
 	],
-	ec2: [Ec2InstanceClassRunner, Ec2InstanceSizeRunner, Ec2WindowsVersionRunner],
+	ec2: [
+		Ec2InstanceClassRunner,
+		Ec2InstanceSizeRunner,
+		Ec2NamedInstanceTypeRunner,
+		Ec2WindowsVersionRunner,
+	],
 };
 
 type RunnerKey = keyof typeof runners;
