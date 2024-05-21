@@ -315,9 +315,21 @@ class RdsEngineRunner<
 			),
 		);
 
-		console.log(this.engines, versions);
+		const flatVersions = versions.flat();
 
-		return versions.flat();
+		const uniqueVersions = Array.from(
+			flatVersions
+				.reduce((acc, { version, isDeprecated }) => {
+					const key = getVersionFromCdkEngineVersion(version).fullVersion;
+					if (acc.has(key)) return acc;
+
+					acc.set(key, { version, isDeprecated });
+					return acc;
+				}, new Map<string, DeprecableEngineVersion<EngineVersion>>())
+				.values(),
+		);
+
+		return uniqueVersions;
 	}
 
 	private static async _getCDKVersions<
