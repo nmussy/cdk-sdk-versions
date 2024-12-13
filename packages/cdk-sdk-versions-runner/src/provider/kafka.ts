@@ -28,7 +28,7 @@ export class KafkaRunner extends CdkSdkVersionRunner<
 		"lib/cluster-version.d.ts",
 	);
 	private static readonly kafkaVersionFactoryRegex =
-		/KafkaVersion\.of\('(?<versionName>[\d.]+)'\)/;
+		/KafkaVersion\.of\('(?<versionName>[\d\w.]+)'\)/;
 
 	public static readonly __MISSING_VERSION__ = "__MISSING_VERSION__";
 
