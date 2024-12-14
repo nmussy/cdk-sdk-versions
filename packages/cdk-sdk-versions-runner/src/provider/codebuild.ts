@@ -9,6 +9,7 @@ import {
 	LinuxArmLambdaBuildImage,
 	LinuxBuildImage,
 	LinuxLambdaBuildImage,
+	MacBuildImage,
 	WindowsBuildImage,
 	type IBuildImage,
 } from "aws-cdk-lib/aws-codebuild";
@@ -30,9 +31,12 @@ import { getStaticFieldComments, type IStaticField } from "../util/tsdoc";
 enum PlatformType {
 	AMAZON_LINUX = "AMAZON_LINUX",
 	AMAZON_LINUX_2 = "AMAZON_LINUX_2",
+	AMAZON_LINUX_2023_AMI = "AMAZON_LINUX_2023_AMI",
 	UBUNTU = "UBUNTU",
 	WINDOWS_SERVER_2019 = "WINDOWS_SERVER_2019",
 	WINDOWS_SERVER_2022 = "WINDOWS_SERVER_2022",
+	WINDOWS_SERVER_2022_AMI = "WINDOWS_SERVER_2022_AMI",
+	MAC = "MAC",
 }
 
 enum Runtime {
@@ -47,7 +51,8 @@ export type BuildImageClass =
 	// Pending https://github.com/aws/deep-learning-containers/issues/2732
 	// | "LinuxGpuBuildImage"
 	| "LinuxLambdaBuildImage"
-	| "LinuxArmLambdaBuildImage";
+	| "LinuxArmLambdaBuildImage"
+	| "MacBuildImage";
 
 type SdkBuildImageMap = { [image in BuildImageClass]: string[] };
 type CdkBuildImageMap = {
@@ -84,6 +89,7 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 		LinuxArmBuildImage: CodeBuildImageRunner.linuxArmPath,
 		LinuxLambdaBuildImage: CodeBuildImageRunner.lambdaPath,
 		LinuxArmLambdaBuildImage: CodeBuildImageRunner.lambdaArmPath,
+		MacBuildImage: CodeBuildImageRunner.projectPath,
 	};
 
 	private static getBuildClass(imageClass: BuildImageClass) {
@@ -98,6 +104,8 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 				return LinuxLambdaBuildImage;
 			case "LinuxArmLambdaBuildImage":
 				return LinuxArmLambdaBuildImage;
+			case "MacBuildImage":
+				return MacBuildImage;
 			default:
 				throw new Error(`Unknown image class: ${imageClass}`);
 		}
@@ -173,6 +181,7 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 			LinuxArmBuildImage: [],
 			LinuxLambdaBuildImage: [],
 			LinuxArmLambdaBuildImage: [],
+			MacBuildImage: [],
 		};
 
 		for (const { platform: _platform, languages = [] } of platforms) {
@@ -182,6 +191,7 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 			switch (platform) {
 				case PlatformType.WINDOWS_SERVER_2019:
 				case PlatformType.WINDOWS_SERVER_2022:
+				case PlatformType.WINDOWS_SERVER_2022_AMI:
 					sdkBuildImages.WindowsBuildImage.push(
 						...CodeBuildImageRunner.getFlatImageIds(languages),
 					);
@@ -191,7 +201,8 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 						...CodeBuildImageRunner.getFlatImageIds(languages),
 					);
 					break;
-				case PlatformType.AMAZON_LINUX_2: {
+				case PlatformType.AMAZON_LINUX_2:
+				case PlatformType.AMAZON_LINUX_2023_AMI: {
 					const runtimeMappedImages =
 						CodeBuildImageRunner.getRuntimeMappedImageIds(
 							CodeBuildImageRunner.getFlatImageIds(languages),
@@ -200,29 +211,35 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 					{
 						const archtectureMappedImages =
 							CodeBuildImageRunner.getArchitectureMappedImageIds(
-								runtimeMappedImages[Runtime.OTHER],
+								runtimeMappedImages[Runtime.OTHER] ?? [],
 							);
 						sdkBuildImages.LinuxBuildImage.push(
-							...archtectureMappedImages[Architecture.x86_64],
+							...(archtectureMappedImages[Architecture.x86_64] ?? []),
 						);
 						sdkBuildImages.LinuxArmBuildImage.push(
-							...archtectureMappedImages[Architecture.arm64],
+							...(archtectureMappedImages[Architecture.arm64] ?? []),
 						);
 					}
 
 					{
 						const archtectureMappedLambdaImages =
 							CodeBuildImageRunner.getArchitectureMappedImageIds(
-								runtimeMappedImages[Runtime.LAMBDA],
+								runtimeMappedImages[Runtime.LAMBDA] ?? [],
 							);
 						sdkBuildImages.LinuxLambdaBuildImage.push(
-							...archtectureMappedLambdaImages[Architecture.x86_64],
+							...(archtectureMappedLambdaImages[Architecture.x86_64] ?? []),
 						);
 						sdkBuildImages.LinuxArmLambdaBuildImage.push(
-							...archtectureMappedLambdaImages[Architecture.arm64],
+							...(archtectureMappedLambdaImages[Architecture.arm64] ?? []),
 						);
 					}
 
+					break;
+				}
+				case PlatformType.MAC: {
+					sdkBuildImages.MacBuildImage.push(
+						...CodeBuildImageRunner.getFlatImageIds(languages),
+					);
 					break;
 				}
 				// Not supported by the CDK
@@ -255,6 +272,7 @@ class CodeBuildImageRunner<T extends IBuildImage> extends CdkSdkVersionRunner<
 			LinuxArmBuildImage: [],
 			LinuxLambdaBuildImage: [],
 			LinuxArmLambdaBuildImage: [],
+			MacBuildImage: [],
 		};
 
 		const staticFields: { [path: string]: IStaticField[] } = {};
@@ -362,5 +380,11 @@ export class LinuxLambdaBuildImageRunner extends CodeBuildImageRunner<LinuxLambd
 export class LinuxArmLambdaBuildImageRunner extends CodeBuildImageRunner<LinuxArmLambdaBuildImage> {
 	constructor() {
 		super("LinuxArmLambdaBuildImage");
+	}
+}
+
+export class MacBuildImageRunner extends CodeBuildImageRunner<MacBuildImage> {
+	constructor() {
+		super("MacBuildImage");
 	}
 }

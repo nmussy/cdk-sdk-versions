@@ -10,6 +10,7 @@ import {
 	LinuxArmLambdaBuildImageRunner,
 	LinuxBuildImageRunner,
 	LinuxLambdaBuildImageRunner,
+	MacBuildImageRunner,
 	OpenSearchRunner,
 	RdsAuroraMysqlEngineRunner,
 	RdsAuroraPostgresEngineRunner,
@@ -41,6 +42,7 @@ const runners: Record<string, Runner[]> = {
 		LinuxArmBuildImageRunner,
 		LinuxLambdaBuildImageRunner,
 		LinuxArmLambdaBuildImageRunner,
+		MacBuildImageRunner,
 	],
 	rds: [
 		RdsMySqlEngineRunner,
